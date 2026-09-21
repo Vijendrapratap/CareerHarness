@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import (
+    applications,
     batches,
     emails,
     gaps,
@@ -17,6 +18,7 @@ from app.api.routers import (
     roles,
     runs,
     scout,
+    vault,
 )
 from app.core.config import settings
 from app.core.database import init_db
@@ -69,3 +71,5 @@ app.include_router(emails.router)
 app.include_router(scout.router)
 app.include_router(jobs.router)
 app.include_router(batches.router)
+app.include_router(vault.router)
+app.include_router(applications.router)

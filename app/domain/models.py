@@ -93,6 +93,12 @@ class Tenant(Base):
     batches: Mapped[list["Batch"]] = relationship(
         "Batch", back_populates="tenant", cascade="all, delete-orphan"
     )
+    document_versions: Mapped[list["DocumentVersion"]] = relationship(
+        "DocumentVersion", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    application_audit_logs: Mapped[list["ApplicationAuditLog"]] = relationship(
+        "ApplicationAuditLog", back_populates="tenant", cascade="all, delete-orphan"
+    )
 
 
 class ConnectedEmail(Base):
@@ -545,3 +551,108 @@ class OutboxEvent(Base):
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="outbox_events")
+
+
+class DocumentVersion(Base):
+    """Immutable document version with lineage tree and outcome tracking (F10, VR-01..03, IT-06)."""
+    __tablename__ = "document_versions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    document_type: Mapped[str] = mapped_column(
+        String(32), default="resume"
+    )  # resume, cover_letter
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[Dict[str, Any]] = mapped_column(PortableJSON, default=dict)
+    raw_markdown: Mapped[str] = mapped_column(Text, default="")
+    parent_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("document_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    is_master: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    target_role_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    target_job_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    diff_summary: Mapped[Dict[str, Any]] = mapped_column(PortableJSON, default=dict)
+    is_immutable: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Conversion & outcome tracking ("3 sends, 1 interview")
+    applications_count: Mapped[int] = mapped_column(Integer, default=0)
+    interviews_count: Mapped[int] = mapped_column(Integer, default=0)
+    rejections_count: Mapped[int] = mapped_column(Integer, default=0)
+    offers_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="document_versions")
+    parent: Mapped[Optional["DocumentVersion"]] = relationship(
+        "DocumentVersion", remote_side=[id], back_populates="children"
+    )
+    children: Mapped[list["DocumentVersion"]] = relationship(
+        "DocumentVersion", back_populates="parent"
+    )
+
+
+class ApplicationAuditLog(Base):
+    """Immutable audit trail for every submitted or handed-off application (F9, AT-07, VR-01)."""
+    __tablename__ = "application_audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("job_listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    resume_version_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("document_versions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    cover_letter_version_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("document_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    batch_item_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    channel: Mapped[str] = mapped_column(
+        String(32), default="ats_autofill"
+    )  # ats_autofill, email_apply, candidate_handoff
+    status: Mapped[str] = mapped_column(
+        String(32), default="submitted"
+    )  # submitted, handoff_ready, failed
+    bot_mitigation_tier: Mapped[int] = mapped_column(Integer, default=1)  # 1, 2, 3
+    screening_answers: Mapped[Dict[str, Any]] = mapped_column(PortableJSON, default=dict)
+    submission_payload_snapshot: Mapped[Dict[str, Any]] = mapped_column(PortableJSON, default=dict)
+    fallback_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    confirmation_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    handoff_bundle_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="application_audit_logs")
+    job: Mapped["JobListing"] = relationship("JobListing")
+    resume_version: Mapped["DocumentVersion"] = relationship(
+        "DocumentVersion", foreign_keys=[resume_version_id]
+    )
+
+
+class ScreeningQuestionAnswer(Base):
+    """Verified answers for application screening questions (F9, AT-04)."""
+    __tablename__ = "screening_question_answers"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    question_pattern: Mapped[str] = mapped_column(String(255), nullable=False)
+    answer_text: Mapped[str] = mapped_column(Text, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=True)
+    source_bullet: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
