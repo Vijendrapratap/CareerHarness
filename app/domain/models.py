@@ -99,6 +99,15 @@ class Tenant(Base):
     application_audit_logs: Mapped[list["ApplicationAuditLog"]] = relationship(
         "ApplicationAuditLog", back_populates="tenant", cascade="all, delete-orphan"
     )
+    applications_tracked: Mapped[list["ApplicationTrack"]] = relationship(
+        "ApplicationTrack", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    outreach_messages: Mapped[list["OutreachMessage"]] = relationship(
+        "OutreachMessage", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    inbound_emails: Mapped[list["InboundEmail"]] = relationship(
+        "InboundEmail", back_populates="tenant", cascade="all, delete-orphan"
+    )
 
 
 class ConnectedEmail(Base):
@@ -655,4 +664,91 @@ class ScreeningQuestionAnswer(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+
+
+class ApplicationTrack(Base):
+    """Application tracking with status lifecycle and silence detection (F11)."""
+    __tablename__ = "applications_tracked"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("job_listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    resume_version_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("document_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    company_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    job_title: Mapped[str] = mapped_column(String(255), nullable=False)
+    portal_type: Mapped[str] = mapped_column(String(64), default="greenhouse")
+    status: Mapped[str] = mapped_column(
+        String(32), default="applied", index=True
+    )  # applied, acknowledged, interview, assessment, offer, rejected, ghosted, withdrawn
+    applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    is_ghosted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="applications_tracked")
+    job: Mapped["JobListing"] = relationship("JobListing")
+    resume_version: Mapped[Optional["DocumentVersion"]] = relationship("DocumentVersion")
+
+
+class OutreachMessage(Base):
+    """Personalized hiring-manager outreach with daily rate cap enforcement (F11, GT-04)."""
+    __tablename__ = "outreach_messages"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    application_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("applications_tracked.id", ondelete="SET NULL"), nullable=True
+    )
+    recipient_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    recipient_role: Mapped[str] = mapped_column(String(128), default="Hiring Manager")
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    body_text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default="draft", index=True
+    )  # draft, pending_approval, sent, failed, rejected
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="outreach_messages")
+    application: Mapped[Optional["ApplicationTrack"]] = relationship("ApplicationTrack")
+
+
+class InboundEmail(Base):
+    """Inbound recruiter/company emails with reply classification (F11, GT-05)."""
+    __tablename__ = "inbound_emails"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    sender_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    body_text: Mapped[str] = mapped_column(Text, nullable=False)
+    classification: Mapped[str] = mapped_column(
+        String(32), default="other", index=True
+    )  # interview, assessment, rejection, request_info, other
+    confidence_score: Mapped[float] = mapped_column(Float, default=0.95)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    application_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("applications_tracked.id", ondelete="SET NULL"), nullable=True
+    )
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="inbound_emails")
+    application: Mapped[Optional["ApplicationTrack"]] = relationship("ApplicationTrack")
+
 

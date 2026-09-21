@@ -11,6 +11,7 @@ from app.api.routers import (
     emails,
     gaps,
     health,
+    insights,
     jobs,
     keys,
     linkedin,
@@ -18,6 +19,7 @@ from app.api.routers import (
     roles,
     runs,
     scout,
+    tracker,
     vault,
 )
 from app.core.config import settings
@@ -73,3 +75,5 @@ app.include_router(jobs.router)
 app.include_router(batches.router)
 app.include_router(vault.router)
 app.include_router(applications.router)
+app.include_router(tracker.router)
+app.include_router(insights.router)
