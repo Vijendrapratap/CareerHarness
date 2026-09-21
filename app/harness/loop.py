@@ -9,6 +9,7 @@ from app.core.model_router import router
 from app.domain.memory import memory
 from app.harness.checkpointer import checkpointer
 from app.harness.gate import gate
+from app.harness.pipeline import guarded_pipeline
 from app.harness.registry import registry
 from app.harness.run import AgentAction, RunContext
 
@@ -65,8 +66,14 @@ class AgentLoop:
             await gate.propose_action(session=session, run=run, action=action)
             return run
 
-        # 6. Execute action
-        output = await tool.execute(tenant_id=run.tenant_id, **action.arguments)
+        # 6. Execute action through guarded pipeline with interceptors
+        output = await guarded_pipeline.execute_guarded(
+            handler=tool.execute,
+            tenant_id=run.tenant_id,
+            tool_name=action.tool_name,
+            arguments=action.arguments,
+            run_id=run.run_id,
+        )
 
         # Track auto-apply quota if executed under Trusted Mode
         if action.external and run.trusted_covers(action):
