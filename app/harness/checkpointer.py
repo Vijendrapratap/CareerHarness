@@ -43,13 +43,22 @@ class Checkpointer:
             ],
         }
 
-        checkpoint = Checkpoint(
-            tenant_id=run.tenant_id,
-            run_id=run.run_id,
-            step_index=run.step_index,
-            state_snapshot=snapshot,
+        query = select(Checkpoint).where(
+            Checkpoint.run_id == run.run_id,
+            Checkpoint.step_index == run.step_index,
         )
-        session.add(checkpoint)
+        existing = (await session.execute(query)).scalar_one_or_none()
+        if existing:
+            existing.state_snapshot = snapshot
+            checkpoint = existing
+        else:
+            checkpoint = Checkpoint(
+                tenant_id=run.tenant_id,
+                run_id=run.run_id,
+                step_index=run.step_index,
+                state_snapshot=snapshot,
+            )
+            session.add(checkpoint)
 
         # Update Run table status and step count
         db_run = await session.get(Run, run.run_id)

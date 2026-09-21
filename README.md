@@ -5,10 +5,8 @@
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
-[![Python 3.12](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14.2%20App%20Router-black.svg)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen.svg)]()
 [![Code Quality](https://img.shields.io/badge/linter-ruff%20clean-green.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)]()
 
