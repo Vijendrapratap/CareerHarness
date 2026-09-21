@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import health, keys, runs
+from app.api.routers import gaps, health, keys, linkedin, resumes, roles, runs
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -49,3 +49,7 @@ async def add_security_headers(request, call_next):
 app.include_router(health.router)
 app.include_router(keys.router)
 app.include_router(runs.router)
+app.include_router(roles.router)
+app.include_router(resumes.router)
+app.include_router(linkedin.router)
+app.include_router(gaps.router)
