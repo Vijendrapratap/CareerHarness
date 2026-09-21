@@ -24,7 +24,7 @@ class AgentLoop:
         action_override: Optional[AgentAction] = None,
     ) -> RunContext:
         """Executes a single step in the agent's plan loop."""
-        # 1. Budgeted memory context retrieval (fail-closed)
+        # 1. Budgeted memory context fetch [fail-closed]
         ctx = memory.retrieve(
             tenant_id=run.tenant_id,
             view_spec=["profile", "roles", "verified_skills", "resume_bullets"],

@@ -39,7 +39,14 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False
 
     # Redis / Celery
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+
+    @property
+    def REDIS_URL(self) -> str:
+        proto = "redis"
+        return os.getenv("REDIS_URL", f"{proto}://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}")
 
     # Rate limits & Guardrails
     MAX_ROLES_PER_TENANT: int = 3
