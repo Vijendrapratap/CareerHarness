@@ -275,3 +275,18 @@ async def test_at05_and_at07_and_vr01_submission_ladder_and_audit_log(
     assert audit_tier3.status == "handoff_ready"
     assert audit_tier3.handoff_bundle_url is not None
     assert audit_tier3.confirmation_code.startswith("HANDOFF-")
+
+
+def test_ats_compliant_pdf_generation_and_text_extraction(sample_master_resume):
+    """Verifies that generated PDF has single-column ATS layout and is cleanly extractable by pypdf."""
+    from app.domain.pdf_generator import pdf_generator
+    from app.domain.resume_parser import resume_parser
+
+    pdf_bytes = pdf_generator.generate_resume_pdf(sample_master_resume)
+    assert len(pdf_bytes) > 500
+
+    extracted_text = resume_parser.extract_text_from_pdf_bytes(pdf_bytes)
+    assert "Jane Doe" in extracted_text
+    assert "Tech Corp" in extracted_text
+    assert "Python" in extracted_text
+    assert "50,000" in extracted_text

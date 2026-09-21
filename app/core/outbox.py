@@ -34,7 +34,9 @@ VALID_EVENTS = {
     "outcome.recorded",
     "entitlement.changed",
     "key.failed",
+    "key.exhausted",
     "run.parked",
+    "stories.extracted",
 }
 
 

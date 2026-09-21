@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from app.api.routers import (
     applications,
+    auth,
     batches,
     emails,
     gaps,
@@ -93,6 +94,7 @@ async def root_dashboard():
 
 # Mount API Routers
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(tenants.router)
 app.include_router(keys.router)
 app.include_router(runs.router)

@@ -230,3 +230,122 @@ async def test_dsh_guarded_tool_execution_pipeline():
         run_id="run-pipeline-01",
     )
     assert output["result"] == 42
+
+
+@pytest.mark.asyncio
+async def test_dsh_5_stage_loop_observe_and_reflect(db_session, sample_tenant):
+    """Verifies Plan -> Act -> Observe -> Reflect -> Checkpoint cycle."""
+    import uuid
+    from app.core.keyvault import keyvault
+    from app.domain.models import Run
+    from app.harness.loop import agent_loop
+    from app.harness.run import AgentAction, RunContext
+
+    await keyvault.store_key(db_session, sample_tenant.id, "openai", "sk-test-loop-key")
+
+    db_run = Run(
+        id=str(uuid.uuid4()),
+        tenant_id=sample_tenant.id,
+        agent_name="profiler",
+        goal="Extract STAR stories",
+        status="running",
+    )
+    db_session.add(db_run)
+    await db_session.flush()
+
+    run_ctx = RunContext(
+        run_id=db_run.id,
+        tenant_id=sample_tenant.id,
+        agent_name="profiler",
+        goal=db_run.goal,
+    )
+
+    action = AgentAction(
+        tool_name="blackboard_read",
+        arguments={"view_spec": ["profile"]},
+        external=False,
+    )
+
+    result_run = await agent_loop.step(
+        session=db_session,
+        run=run_ctx,
+        provider="openai",
+        action_override=action,
+    )
+
+    # Verify observe and reflect stages populated
+    assert len(result_run.observations) == 1
+    assert result_run.observations[0]["tool_name"] == "blackboard_read"
+    assert result_run.observations[0]["status"] == "success"
+
+    assert len(result_run.reflections) == 1
+    assert result_run.reflections[0]["success"] is True
+    assert result_run.reflections[0]["needs_correction"] is False
+
+
+@pytest.mark.asyncio
+async def test_dsh_loop_key_exhausted_fail_closed(db_session, sample_tenant, monkeypatch):
+    """Verifies that KeyExhaustedError marks key no_credits and parks run without platform fallback."""
+    import uuid
+    from sqlalchemy import select
+    from app.core.keyvault import keyvault
+    from app.core.model_router import KeyExhaustedError, router
+    from app.domain.models import ApiKey, OutboxEvent, Run
+    from app.harness.loop import agent_loop
+    from app.harness.run import RunContext
+
+    await keyvault.store_key(db_session, sample_tenant.id, "openai", "sk-test-exhausted-key")
+
+    db_run = Run(
+        id=str(uuid.uuid4()),
+        tenant_id=sample_tenant.id,
+        agent_name="scout",
+        goal="Find jobs",
+        status="running",
+    )
+    db_session.add(db_run)
+    await db_session.flush()
+
+    run_ctx = RunContext(
+        run_id=db_run.id,
+        tenant_id=sample_tenant.id,
+        agent_name="scout",
+        goal=db_run.goal,
+    )
+
+    # Monkeypatch router.call to raise KeyExhaustedError
+    async def mock_call(*args, **kwargs):
+        raise KeyExhaustedError("Insufficient credits on BYOK key")
+
+    monkeypatch.setattr(router, "call", mock_call)
+
+    # Step without action override -> triggers model router inference
+    result_run = await agent_loop.step(
+        session=db_session,
+        run=run_ctx,
+        provider="openai",
+    )
+
+    # Run must be parked with no_credits
+    assert result_run.status == "no_credits"
+    assert "credit exhausted" in result_run.pause_reason
+
+    # Key status must be updated to no_credits in DB
+    key_record = (
+        await db_session.execute(
+            select(ApiKey).where(ApiKey.tenant_id == sample_tenant.id, ApiKey.provider == "openai")
+        )
+    ).scalar_one()
+    assert key_record.status == "no_credits"
+
+    # Outbox event emitted
+    event = (
+        await db_session.execute(
+            select(OutboxEvent).where(
+                OutboxEvent.tenant_id == sample_tenant.id,
+                OutboxEvent.event_name == "key.exhausted",
+            )
+        )
+    ).scalar_one_or_none()
+    assert event is not None
+    assert event.payload["provider"] == "openai"

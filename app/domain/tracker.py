@@ -331,3 +331,28 @@ async def send_outreach_message(
     msg.sent_at = now
     await session.flush()
     return msg
+
+
+def calculate_interview_reminders(
+    interview_time: datetime,
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Calculates T-24h and T-1h notification trigger timestamps for an upcoming interview."""
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if interview_time.tzinfo is None:
+        interview_time = interview_time.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    t_minus_24h = interview_time - timedelta(hours=24)
+    t_minus_1h = interview_time - timedelta(hours=1)
+
+    return {
+        "interview_time": interview_time.isoformat(),
+        "reminder_24h_at": t_minus_24h.isoformat(),
+        "reminder_1h_at": t_minus_1h.isoformat(),
+        "should_send_24h": (now >= t_minus_24h and now < t_minus_1h),
+        "should_send_1h": (now >= t_minus_1h and now < interview_time),
+        "is_past": now >= interview_time,
+    }

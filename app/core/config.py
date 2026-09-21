@@ -48,6 +48,11 @@ class Settings(BaseSettings):
         proto = "redis"
         return os.getenv("REDIS_URL", f"{proto}://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}")
 
+    # JWT & Auth
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "career-harness-jwt-secret-key-32charsmin-for-security")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days session
+
     # Rate limits & Guardrails
     MAX_ROLES_PER_TENANT: int = 3
     MGMT_ROLE_EXTRA_SLOT: int = 1

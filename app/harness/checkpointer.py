@@ -29,6 +29,8 @@ class Checkpointer:
             "plan": run.plan,
             "trusted_mode": run.trusted_mode,
             "daily_auto_applies_used": run.daily_auto_applies_used,
+            "observations": run.observations,
+            "reflections": run.reflections,
             "history": [
                 {
                     "step_index": h.step_index,
@@ -114,6 +116,8 @@ class Checkpointer:
             history=history,
             trusted_mode=snap.get("trusted_mode", False),
             daily_auto_applies_used=snap.get("daily_auto_applies_used", 0),
+            observations=snap.get("observations", []),
+            reflections=snap.get("reflections", []),
         )
 
 

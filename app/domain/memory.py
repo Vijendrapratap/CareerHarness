@@ -21,6 +21,7 @@ class BlackboardData:
     resume_bullets: List[Dict[str, Any]] = field(default_factory=list)
     todo_fixes: List[Dict[str, Any]] = field(default_factory=list)
     active_jobs: List[Dict[str, Any]] = field(default_factory=list)
+    story_bank: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class ContextBudgeter:

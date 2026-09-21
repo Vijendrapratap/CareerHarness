@@ -35,10 +35,24 @@ class RunContext:
     status: str = "running"
     step_index: int = 0
     plan: List[str] = field(default_factory=list)
-    history: List[RunStepResult] = field(default_factory=list)
-    pause_reason: Optional[str] = None
     trusted_mode: bool = False
     daily_auto_applies_used: int = 0
+    history: List[RunStepResult] = field(default_factory=list)
+    pause_reason: Optional[str] = None
+    observations: List[Dict[str, Any]] = field(default_factory=list)
+    reflections: List[Dict[str, Any]] = field(default_factory=list)
+
+    def add_observation(self, observation: Dict[str, Any]) -> None:
+        """Appends an observation from tool execution."""
+        self.observations.append(observation)
+
+    def add_reflection(self, reflection: Dict[str, Any]) -> None:
+        """Appends a reflection evaluating progress, invariants, and corrections."""
+        self.reflections.append(reflection)
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in ("completed", "failed", "parked", "awaiting_approval", "no_credits")
 
     def trusted_covers(self, action: AgentAction) -> bool:
         """Evaluates whether an external action is pre-authorized by Trusted Mode (D5).

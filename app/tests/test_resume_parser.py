@@ -59,3 +59,31 @@ async def test_on03_scanned_pdf_path_degrades_gracefully(db_session, sample_tena
     # Confidence must drop below 0.8 for human-confirmation review
     assert parsed.confidence_score < 0.8
     assert parsed.confidence_score == 0.3
+
+
+@pytest.mark.asyncio
+async def test_pdf_binary_intake_with_pypdf(db_session, sample_tenant):
+    """Verifies binary PDF byte parsing using reportlab generator and pypdf extractor."""
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.drawString(100, 750, "Lead Architect and Python Engineer with Docker expertise.")
+    c.drawString(100, 730, "- Scaled distributed data pipelines handling 5M events per day on AWS.")
+    c.save()
+    pdf_bytes = buffer.getvalue()
+
+    parsed = await resume_parser.parse_pdf_bytes(
+        session=db_session,
+        tenant_id=sample_tenant.id,
+        filename="generated_sample.pdf",
+        pdf_bytes=pdf_bytes,
+    )
+
+    assert parsed.filename == "generated_sample.pdf"
+    assert "Python" in [s["name"] for s in parsed.extracted_skills]
+    assert "Docker" in [s["name"] for s in parsed.extracted_skills]
+    assert len(parsed.metrics) >= 1
+    assert parsed.confidence_score == 1.0

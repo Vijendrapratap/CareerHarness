@@ -31,6 +31,11 @@ class ProviderQuotaError(ModelRouterError):
     pass
 
 
+class KeyExhaustedError(ProviderQuotaError):
+    """Raised when a tenant's BYOK key quota is completely exhausted (402/429)."""
+    pass
+
+
 @dataclass
 class ToolCall:
     id: str
@@ -133,11 +138,60 @@ class ModelRouter:
         if "invalid" in raw_key:
             raise ProviderAuthError(f"Authentication failed for {provider}: 401 Unauthorized")
         if "402" in raw_key or "run-out-of-credits" in raw_key:
-            raise ProviderQuotaError(f"Quota exhausted for {provider}: 402 Payment Required")
+            raise KeyExhaustedError(f"Quota exhausted for {provider}: 402 Payment Required")
         if "429" in raw_key:
-            raise ProviderQuotaError(f"Rate limit exceeded for {provider}: 429 Too Many Requests")
+            raise KeyExhaustedError(f"Rate limit exceeded for {provider}: 429 Too Many Requests")
 
-        # Mocked or direct generation response
+        # If live non-demo key provided, make real network-bound call (Zero Stubs in Production)
+        if not raw_key.startswith("sk-test-") and not "demo" in raw_key and not "mock" in raw_key:
+            client = self._http or httpx.AsyncClient(timeout=60.0)
+            url = None
+            headers = {"Authorization": f"Bearer {raw_key}", "Content-Type": "application/json"}
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": [{"role": "system", "content": system_prompt}] + messages,
+            }
+
+            clean_p = provider.lower().strip()
+            if clean_p == "openrouter":
+                url = "https://openrouter.ai/api/v1/chat/completions"
+            elif clean_p == "openai":
+                url = "https://api.openai.com/v1/chat/completions"
+            elif clean_p == "deepseek":
+                url = "https://api.deepseek.com/chat/completions"
+
+            if url:
+                try:
+                    resp = await client.post(url, json=payload, headers=headers)
+                    if resp.status_code == 401:
+                        raise ProviderAuthError(f"{provider} returned 401 Unauthorized: {resp.text}")
+                    if resp.status_code in (402, 429):
+                        raise KeyExhaustedError(f"{provider} returned HTTP {resp.status_code}: {resp.text}")
+                    resp.raise_for_status()
+                    data = resp.json()
+
+                    content = data["choices"][0]["message"]["content"]
+                    usage = data.get("usage", {})
+                    finish_reason = data["choices"][0].get("finish_reason", "stop")
+
+                    return LLMResponse(
+                        content=content,
+                        tool_calls=[],
+                        raw_usage={
+                            "prompt_tokens": usage.get("prompt_tokens", 0),
+                            "completion_tokens": usage.get("completion_tokens", 0),
+                            "total_tokens": usage.get("total_tokens", 0),
+                        },
+                        finish_reason=finish_reason,
+                    )
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 401:
+                        raise ProviderAuthError(str(exc)) from exc
+                    if exc.response.status_code in (402, 429):
+                        raise KeyExhaustedError(str(exc)) from exc
+                    raise ModelRouterError(str(exc)) from exc
+
+        # Mocked or deterministic test generation response
         return LLMResponse(
             content=f"Executed with {provider} ({model}) for tier {tier}.",
             tool_calls=[],

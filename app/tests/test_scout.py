@@ -70,3 +70,42 @@ async def test_rd03_manual_scan_rate_limits(db_session, cleared_readiness_tenant
     with pytest.raises(ScoutRateLimitError) as exc_info_pro:
         await scout_scheduler.trigger_manual_scan(db_session, cleared_readiness_tenant.id)
     assert "10/day on Pro" in str(exc_info_pro.value)
+
+
+@pytest.mark.asyncio
+async def test_ats_scraper_greenhouse_and_discover_ingest(db_session, cleared_readiness_tenant):
+    """Verifies ATS scraper fetches public job boards and ingests/matches jobs."""
+    import json
+    import httpx
+    from app.domain.scout import ats_scraper
+
+    fake_greenhouse_response = {
+        "jobs": [
+            {
+                "id": 12345,
+                "title": "Senior Distributed Systems Engineer",
+                "absolute_url": "https://boards.greenhouse.io/stripe/jobs/12345",
+                "location": {"name": "Remote, US"},
+                "content": "Building high reliability payment pipelines in Python and Go.",
+            }
+        ]
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "boards-api.greenhouse.io" in str(request.url):
+            return httpx.Response(200, text=json.dumps(fake_greenhouse_response))
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        jobs = await ats_scraper.discover_and_ingest(
+            session=db_session,
+            tenant_id=cleared_readiness_tenant.id,
+            targets=[{"portal": "greenhouse", "org": "stripe"}],
+            client=client,
+        )
+
+    assert len(jobs) == 1
+    assert jobs[0].company == "Stripe"
+    assert "Distributed Systems" in jobs[0].title
+    assert jobs[0].portal_type == "greenhouse"

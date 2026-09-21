@@ -5,7 +5,10 @@
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
-[![Tests](https://img.shields.io/badge/tests-60%20passing-brightgreen.svg)]()
+[![Python 3.12](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14.2%20App%20Router-black.svg)](https://nextjs.org/)
+[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen.svg)]()
 [![Code Quality](https://img.shields.io/badge/linter-ruff%20clean-green.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)]()
 
@@ -20,20 +23,21 @@
    - Candidates supply their own LLM API credentials (OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek).
    - Keys are envelope-encrypted with **AES-256-GCM** using per-tenant **HKDF-SHA256** derived Data Encryption Keys (DEKs).
    - Decryption occurs strictly in-memory per task execution; keys are masked everywhere in logs and UI.
-   - Upstream `402 Payment Required` or `429 Rate Limit` errors pause the tenant run fail-closed with **zero platform key fallback**.
-2. **Front-Face First Spine (Readiness Gate):**
+   - Upstream `402 Payment Required` or `429 Rate Limit` errors mark keys as `no_credits` and park tenant runs fail-closed with **zero platform key fallback**.
+2. **Strict Identity & Authentication (Zero Social Login):**
+   - Identity is strictly Email/Password with **Argon2id (RFC 9106)** password hashing.
+   - Session tokens delivered in cryptographically signed, `HttpOnly`, `SameSite=Lax`, `Secure` cookies and Bearer tokens.
+   - Passwordless recovery supported via cryptographically random one-time magic links.
+3. **Front-Face First Spine (Readiness Gate):**
    - Automated discovery (Scout) and application execution remain **strictly locked** until the candidate's Front-Face score reaches $\ge 70$ with **zero open critical items**.
    - Dismissing a critical to-do permanently caps the candidate's score at 69 until resolved.
-3. **Honesty-Guaranteed Tailoring:**
-   - Resumes and screening answers are constrained strictly to verified facts from the candidate's master resume.
-   - An adversarial **Reviewer Subagent** intercepts hallucinations and enforces a 0% fabrication policy.
-4. **DeepSeek Harness (dsh) Adapted Core:**
-   - **Capability Seams:** Pluggable ATS providers with automated multi-tier fallbacks.
-   - **Session Event Projections:** Append-only event folding (`SessionEvent`) into real-time state snapshots.
-   - **Agent Teams & Task Board:** Coordinated handoffs across Scout, Analyst, Tailor, Reviewer, and Dispatcher.
+4. **DeepSeek Harness Core (5-Stage Loop & Capability Seams):**
+   - Strict `Plan → Act → Observe → Reflect → Checkpoint` execution cycle.
+   - **Reflect-on-Tool-Result:** Evaluates every observation against domain honesty invariants. If hallucination or empty output occurs, reflection injects `system_correction` before the next step.
+   - **Capability Seams:** Pluggable ATS providers (Greenhouse, Lever, Ashby) with automated 3-tier fallback ladder.
    - **Guarded Tool Execution Pipeline:** Fail-closed tenant isolation and pre/post interceptors.
-5. **OpenRouter DeepSeek Flash v4.1 Integration:**
-   - Default high-speed cost-effective inference routed to `deepseek/deepseek-chat-v4.1` with first-class model override and R1 frontier support.
+5. **Modern Next.js 14 App Router Monorepo:**
+   - Unified developer experience with FastAPI backend alongside modern Next.js 14 App Router frontend under `frontend/` with 6 dedicated views: **Today**, **Pipeline**, **Documents**, **Outreach**, **Insights**, and **Settings**.
 
 ---
 
@@ -270,6 +274,7 @@ Body: {
 | Router | Prefix | Key Endpoints | Purpose |
 |---|---|---|---|
 | **Health** | `/health` | `GET /health` | Service liveness & environment status |
+| **Auth** | `/api/auth` | `POST /signup`, `POST /login`, `POST /magic-link` | Argon2id email/password auth, HttpOnly cookies & magic link recovery |
 | **Dashboard**| `/` | `GET /` | Interactive single-page test console |
 | **Tenants** | `/api/tenants` | `POST /`, `GET /demo`, `GET /{id}` | Multi-tenant onboarding & demo sandbox |
 | **Keys** | `/api/keys` | `POST /`, `GET /`, `DELETE /{id}` | BYOK Key Vault with AES-256-GCM envelope encryption |

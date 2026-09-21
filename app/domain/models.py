@@ -54,6 +54,12 @@ class Tenant(Base):
     )
 
     # Relationships with cascade delete (KY-05)
+    users: Mapped[list["User"]] = relationship(
+        "User", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    stories: Mapped[list["Story"]] = relationship(
+        "Story", back_populates="tenant", cascade="all, delete-orphan"
+    )
     api_keys: Mapped[list["ApiKey"]] = relationship(
         "ApiKey", back_populates="tenant", cascade="all, delete-orphan"
     )
@@ -750,5 +756,53 @@ class InboundEmail(Base):
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="inbound_emails")
     application: Mapped[Optional["ApplicationTrack"]] = relationship("ApplicationTrack")
+
+
+class User(Base):
+    """Real Authentication user model (Phase 0, Email/Password + Argon2id)."""
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="users")
+
+
+class Story(Base):
+    """Candidate experience story bank for reflection and outreach (Phase 2, Profiler)."""
+    __tablename__ = "stories"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    situation: Mapped[str] = mapped_column(Text, nullable=False)
+    task: Mapped[str] = mapped_column(Text, nullable=False)
+    action: Mapped[str] = mapped_column(Text, nullable=False)
+    result: Mapped[str] = mapped_column(Text, nullable=False)
+    skills_demonstrated: Mapped[list] = mapped_column(PortableJSON, default=list)
+    metrics: Mapped[list] = mapped_column(PortableJSON, default=list)
+    verified_against_master: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="stories")
+
 
 

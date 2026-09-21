@@ -59,6 +59,35 @@ class ResumeParserService:
         return extracted
 
     @staticmethod
+    def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
+        """Extracts text from binary PDF bytes using pypdf."""
+        import io
+        from pypdf import PdfReader
+
+        try:
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            pages = [page.extract_text() or "" for page in reader.pages]
+            return "\n".join(pages).strip()
+        except Exception as e:
+            raise ValueError(f"Failed to parse PDF binary: {str(e)}")
+
+    @staticmethod
+    async def parse_pdf_bytes(
+        session: AsyncSession,
+        tenant_id: str,
+        filename: str,
+        pdf_bytes: bytes,
+    ) -> ResumeParse:
+        """Parses binary PDF bytes into structured sections, metrics, and unverified skills."""
+        raw_text = ResumeParserService.extract_text_from_pdf_bytes(pdf_bytes)
+        return await ResumeParserService.parse_resume_text(
+            session=session,
+            tenant_id=tenant_id,
+            filename=filename,
+            content=raw_text,
+        )
+
+    @staticmethod
     async def parse_resume_text(
         session: AsyncSession,
         tenant_id: str,
