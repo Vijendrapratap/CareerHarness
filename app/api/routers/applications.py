@@ -83,9 +83,13 @@ async def tailor_application_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent or master resume not found")
 
     # Get verified skills
-    parse_stmt = select(ResumeParse).where(ResumeParse.tenant_id == tenant_id).order_by(ResumeParse.created_at.desc())
-    parse_res = await session.execute(parse_stmt)
-    resume_parse = parse_res.scalar_one_or_none()
+    parse_stmt = (
+        select(ResumeParse)
+        .where(ResumeParse.tenant_id == tenant_id)
+        .order_by(ResumeParse.created_at.desc())
+        .limit(1)
+    )
+    resume_parse = (await session.execute(parse_stmt)).scalars().first()
 
     verified_skills: List[str] = []
     if resume_parse:
@@ -181,9 +185,13 @@ async def screening_questions_endpoint(
     facts = req.facts_override or {}
     if not facts:
         # Load verified facts from DB
-        parse_stmt = select(ResumeParse).where(ResumeParse.tenant_id == tenant_id).order_by(ResumeParse.created_at.desc())
-        parse_res = await session.execute(parse_stmt)
-        resume_parse = parse_res.scalar_one_or_none()
+        parse_stmt = (
+            select(ResumeParse)
+            .where(ResumeParse.tenant_id == tenant_id)
+            .order_by(ResumeParse.created_at.desc())
+            .limit(1)
+        )
+        resume_parse = (await session.execute(parse_stmt)).scalars().first()
         verified_skills = []
         if resume_parse:
             verified_skills = [

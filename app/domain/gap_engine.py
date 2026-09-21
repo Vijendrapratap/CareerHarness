@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import desc, select
+from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.outbox import outbox
@@ -89,10 +89,29 @@ class GapEngine:
             metrics_found = len(resume.metrics)
 
         # 3. Generate To-Do items with GE-01 (Source citation) and GE-02 (No invented skills)
+        existing_todos_q = select(TodoItem).where(
+            TodoItem.tenant_id == tenant_id,
+            TodoItem.status.in_(["accepted", "dismissed"]),
+        )
+        resolved_todos = (await session.execute(existing_todos_q)).scalars().all()
+        resolved_issue_keys = {t.issue_text for t in resolved_todos}
+
+        # Clean up prior unaccepted open todos to prevent accumulation
+        await session.execute(
+            delete(TodoItem).where(
+                TodoItem.tenant_id == tenant_id,
+                TodoItem.status == "open",
+            )
+        )
+
         todo_items: List[TodoItem] = []
         presentation_gaps: List[Dict[str, Any]] = []
         skill_gaps: List[Dict[str, Any]] = []
         linkedin_gaps: List[Dict[str, Any]] = []
+
+        def add_todo_if_new(todo: TodoItem):
+            if todo.issue_text not in resolved_issue_keys:
+                todo_items.append(todo)
 
         # Check: Missing metrics in resume bullets (Presentation gap)
         for bullet in bullets:
@@ -112,7 +131,7 @@ class GapEngine:
                     has_unverified_metric=True,
                     status="open",
                 )
-                todo_items.append(todo)
+                add_todo_if_new(todo)
 
         # Check: Missing baseline skills (Honest skill gaps)
         for req_skill in baseline_skills:
@@ -130,7 +149,7 @@ class GapEngine:
                     source_bullet=None,
                     status="open",
                 )
-                todo_items.append(todo)
+                add_todo_if_new(todo)
 
         # Check: LinkedIn headline keyword alignment
         if linkedin:
@@ -150,20 +169,19 @@ class GapEngine:
                     source_bullet=linkedin.headline,  # GE-01 Citability
                     status="open",
                 )
-                todo_items.append(todo)
+                add_todo_if_new(todo)
         else:
-            todo_items.append(
-                TodoItem(
-                    id=str(uuid.uuid4()),
-                    tenant_id=tenant_id,
-                    category="linkedin_profile",
-                    severity="critical",
-                    issue_text="No LinkedIn profile linked yet.",
-                    why_it_matters="A verified LinkedIn profile completes candidate front-face readiness.",
-                    fix_draft="Paste or connect your LinkedIn profile.",
-                    status="open",
-                )
+            todo = TodoItem(
+                id=str(uuid.uuid4()),
+                tenant_id=tenant_id,
+                category="linkedin_profile",
+                severity="critical",
+                issue_text="No LinkedIn profile linked yet.",
+                why_it_matters="A verified LinkedIn profile completes candidate front-face readiness.",
+                fix_draft="Paste or connect your LinkedIn profile.",
+                status="open",
             )
+            add_todo_if_new(todo)
 
         # 4. Save Gap Report and Todo Items
         gap_report = GapReport(

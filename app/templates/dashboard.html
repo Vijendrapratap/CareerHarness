@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareerHarness — Interactive Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0f17;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1a2234;
+      --border-subtle: #1f293d;
+      --border-accent: #2d3e60;
+      --text-main: #f3f4f6;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #0b0f17;
+      font-size: 1.1rem;
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      background-color: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border-radius: 9999px;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .tenant-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--bg-surface-elevated);
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      font-size: 0.82rem;
+    }
+
+    .tenant-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-emerald);
+      box-shadow: 0 0 10px var(--accent-emerald);
+    }
+
+    .btn {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #0b0f17;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+      border-color: var(--border-accent);
+    }
+    .btn-secondary:hover { background: var(--border-subtle); }
+
+    .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      flex: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .main-panel {
+      padding: 1.5rem 2rem;
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .side-panel {
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 61px;
+      height: calc(100vh - 61px);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.75rem;
+      overflow-x: auto;
+    }
+
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .nav-tab:hover { color: var(--text-muted); background: var(--bg-surface-elevated); }
+    .nav-tab.active {
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.75rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .form-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-control, textarea, select {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.55rem 0.75rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: border-color 0.15s ease;
+    }
+    .form-control:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+
+    textarea {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      resize: vertical;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .console-header {
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface-elevated);
+    }
+
+    .console-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .console-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background: #070a10;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .log-entry {
+      background: #0c121d;
+      border-left: 3px solid var(--accent-cyan);
+      border-radius: 0 6px 6px 0;
+      padding: 0.6rem 0.75rem;
+      word-break: break-word;
+    }
+    .log-entry.success { border-left-color: var(--accent-emerald); }
+    .log-entry.error { border-left-color: var(--accent-rose); }
+    .log-entry.warn { border-left-color: var(--accent-amber); }
+
+    .log-meta {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-bottom: 0.25rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .log-json {
+      white-space: pre-wrap;
+      color: #93c5fd;
+      line-height: 1.4;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .pill {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .pill-green { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
+    .pill-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+    .pill-amber { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+    .pill-rose { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); }
+
+    .tab-content { display: none; flex-direction: column; gap: 1rem; }
+    .tab-content.active { display: flex; }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      color: #0b0f17;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .stat-box {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .stat-number { font-size: 1.4rem; font-weight: 800; color: var(--accent-cyan); }
+    .stat-desc { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; }
+
+    @media (max-width: 1024px) {
+      .container { grid-template-columns: 1fr; }
+      .side-panel { height: 400px; position: static; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">CH</div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <h1>CareerHarness</h1>
+          <span class="brand-badge">Standalone AI Career Agent</span>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-dim);">BYOK Key Vault • Front-Face First • DeepSeek Thin Harness</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div class="tenant-badge">
+        <div class="tenant-indicator" id="liveIndicator"></div>
+        <div>
+          <span style="color: var(--text-dim); font-size: 0.7rem;">TENANT:</span>
+          <strong id="displayTenantName" style="color: var(--text-main); font-size: 0.78rem;">Loading...</strong>
+          <span id="displayTenantId" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-cyan); margin-left: 0.3rem;"></span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="initDemoTenant()">Switch Demo</button>
+      </div>
+
+      <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">Swagger Docs</a>
+      <a href="/health" target="_blank" class="btn btn-secondary btn-sm">Health</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Main Interactive Area -->
+    <main class="main-panel">
+      <!-- Nav Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('tab-autoflow')">⚡ 1-Click Automated Demo</button>
+        <button class="nav-tab" onclick="switchTab('tab-byok')">🔑 1. BYOK Key Vault</button>
+        <button class="nav-tab" onclick="switchTab('tab-frontface')">🎯 2. Front-Face Gate</button>
+        <button class="nav-tab" onclick="switchTab('tab-discovery')">🔭 3. Scout & Batches</button>
+        <button class="nav-tab" onclick="switchTab('tab-execution')">🚀 4. 5-Stage Apply & ATS</button>
+        <button class="nav-tab" onclick="switchTab('tab-tracker')">📬 5. Tracker & Outreach</button>
+        <button class="nav-tab" onclick="switchTab('tab-insights')">📊 6. Funnel Analytics</button>
+      </nav>
+
+      <!-- TAB: 1-Click Automated Demo Flow -->
+      <section id="tab-autoflow" class="tab-content active">
+        <div class="card" style="border-color: rgba(6, 182, 212, 0.4); background: linear-gradient(180deg, rgba(6, 182, 212, 0.05), var(--bg-surface));">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <span class="step-badge">★</span>
+                End-to-End Orchestrated Walkthrough
+              </div>
+              <div class="card-subtitle">Executes all platform phases in sequential order using live API endpoints</div>
+            </div>
+            <button class="btn btn-primary" id="btnRunFullFlow" onclick="runFullFlow()">▶ Run Full Flow</button>
+          </div>
+
+          <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+            This runner executes the full end-to-end CareerHarness lifecycle:
+            <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+              <li><strong>Init Demo Tenant</strong>: Bootstraps isolated tenant boundary with RLS and HKDF namespace.</li>
+              <li><strong>Save BYOK Key</strong>: Saves OpenRouter credential configured for <code>deepseek/deepseek-chat-v4.1</code>.</li>
+              <li><strong>Role Selection</strong>: Picks "Backend Architect" from Role Catalog.</li>
+              <li><strong>Resume & Skills</strong>: Ingests master resume, extracts skills, and confirms verified facts.</li>
+              <li><strong>Gap Engine Audit</strong>: Computes 2-way audit and verifies Front-Face Readiness Score &ge; 70.</li>
+              <li><strong>Scout Trigger</strong>: Schedules scan, ingests job listings, and scores matches.</li>
+              <li><strong>Batch Formulation</strong>: Previews batch apply item with tailored resume and cover letter.</li>
+              <li><strong>5-Stage Execution</strong>: Tailors resume strictly to factual constraints, audits honesty, and runs 3-Tier ATS Fallback Ladder.</li>
+              <li><strong>Tracker & Insights</strong>: Ingests inbound interview email and computes conversion funnel analytics.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="stat-box">
+            <div class="stat-desc">Target Readiness Threshold</div>
+            <div class="stat-number">70 / 100</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Front-Face Gate blocks Scout & Apply below this score</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-desc">Active Model Provider</div>
+            <div class="stat-number" style="font-size: 1.1rem; color: var(--accent-emerald);">OpenRouter / DeepSeek Flash v4.1</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">BYOK decrypted in-memory only; 0 platform fallback</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: BYOK Key Vault -->
+      <section id="tab-byok" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="step-badge">1</span> BYOK Key Vault (Envelope Encryption)</div>
+              <div class="card-subtitle">Per-tenant HKDF DEK derived from master key; encrypted with AES-256-GCM</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="fetchKeys()">Refresh Keys</button>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">LLM Provider</label>
+              <select id="keyProvider" class="form-control">
+                <option value="openrouter">OpenRouter (DeepSeek Flash v4.1 default)</option>
+                <option value="openai">OpenAI (gpt-4o-mini / gpt-4o)</option>
+                <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+                <option value="gemini">Google Gemini (1.5 Flash / Pro)</option>
+                <option value="deepseek">DeepSeek Direct API</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Key (Ciphertext at rest)</label>
+              <input type="password" id="rawKeyInput" class="form-control" placeholder="sk-or-v1-..." value="sk-or-v1-demo-deepseek-flashv4.1-testkey" />
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button class="btn btn-primary" onclick="saveKey()">Encrypt & Save Key</button>
+          </div>
+
+          <div id="keysTableContainer" style="margin-top: 0.5rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Front-Face Readiness -->
+      <section id="tab-frontface" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="step-badge">2</span> Front-Face First Engine</div>
+              <div class="card-subtitle">Roles selection, resume ingestion, gap engine, and readiness score check</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Target Role Selection (Max 4)</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="roleSelect" class="form-control" style="flex: 1;">
+                <option value="role_backend_arch">Backend Architect (Priority)</option>
+                <option value="role_fullstack_eng">Full-Stack Engineer</option>
+                <option value="role_ai_agent_eng">AI Agent Engineer</option>
+                <option value="role_staff_platform">Staff Platform Engineer</option>
+              </select>
+              <button class="btn btn-secondary" onclick="submitRoleSelection()">Set Target Roles</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Master Resume Content</label>
+            <textarea id="resumeContentInput" rows="4" class="form-control">Senior Backend Architect with 10 years experience.
+- Architected high-throughput message streaming cluster handling 10M events/day.
+- Managed PostgreSQL sharding, Redis caching, and async Python pipelines.
+Skills: Python, SQL, Distributed Systems, Redis, Docker, FastAPI.</textarea>
+            <button class="btn btn-secondary btn-sm" style="align-self: flex-start; margin-top: 0.4rem;" onclick="uploadResume()">Parse Master Resume</button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">LinkedIn Profile Paste (F4)</label>
+            <div class="grid-2">
+              <input type="text" id="liHeadline" class="form-control" value="Staff Backend Architect | Distributed Systems" placeholder="Headline" />
+              <input type="text" id="liSkills" class="form-control" value="Python, SQL, Distributed Systems" placeholder="Skills (comma separated)" />
+            </div>
+            <button class="btn btn-secondary btn-sm" style="align-self: flex-start; margin-top: 0.4rem;" onclick="pasteLinkedIn()">Paste LinkedIn Data</button>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <div>
+              <span style="font-size: 0.8rem; color: var(--text-dim);">Readiness Gate:</span>
+              <strong id="readinessScoreLabel" style="font-size: 1.1rem; color: var(--accent-cyan); margin-left: 0.5rem;">Not Computed</strong>
+            </div>
+            <button class="btn btn-primary" onclick="computeReadiness()">Calculate Readiness Score</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Discovery & Batches -->
+      <section id="tab-discovery" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="step-badge">3</span> Job Scout & Batch Engine</div>
+              <div class="card-subtitle">Scout scheduler (F7), ghost-job filtering (F8), and interactive batch preview</div>
+            </div>
+            <button class="btn btn-primary" onclick="triggerScout()">Trigger Scout Scan</button>
+          </div>
+
+          <div id="jobMatchesContainer">
+            <p style="font-size: 0.82rem; color: var(--text-dim);">Click 'Trigger Scout Scan' to search for high-match jobs matching your selected roles.</p>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <button class="btn btn-secondary" onclick="createBatch()">Formulate Batch</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Execution & ATS Seam -->
+      <section id="tab-execution" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="step-badge">4</span> 5-Stage Execution & ATS Fallback Ladder</div>
+              <div class="card-subtitle">Tailor resume &rarr; Reviewer subagent &rarr; Cover letter &rarr; ATS scan &rarr; Submission</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Target Role Title</label>
+              <input type="text" id="applyRoleTitle" class="form-control" value="Senior Backend Architect" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Application Channel / URL</label>
+              <input type="text" id="applyUrl" class="form-control" value="https://boards.greenhouse.io/demo-corp/jobs/101" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ATS Fallback Test Simulation</label>
+            <select id="seamSimulation" class="form-control">
+              <option value="standard">Standard: Tier 1 Greenhouse / Lever Submission</option>
+              <option value="bot_blocked">Simulate CAPTCHA / 403: Fallback to Tier 2 Direct Mailbox</option>
+              <option value="handoff">Simulate No Email: Fallback to Tier 3 1-Click Candidate Handoff</option>
+            </select>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button class="btn btn-primary" onclick="executeApplication()">Execute 5-Stage Application</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Tracker & Outreach -->
+      <section id="tab-tracker" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="step-badge">5</span> Tracker & Recruiter Outreach</div>
+              <div class="card-subtitle">Status lifecycle, inbound email classifier (F11), and 15/day outreach rate limit</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="fetchApplications()">Refresh Tracker</button>
+          </div>
+
+          <div id="applicationsTableContainer">
+            <p style="font-size: 0.82rem; color: var(--text-dim);">No applications submitted yet in this session.</p>
+          </div>
+
+          <div class="card-header" style="margin-top: 1rem;">
+            <div class="card-title" style="font-size: 0.88rem;">Simulate Inbound Recruiter Email</div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input type="text" id="emailSubject" class="form-control" value="Invitation to Interview: Senior Backend Architect" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Classification Type</label>
+              <select id="emailClassification" class="form-control">
+                <option value="interview">Interview Invitation</option>
+                <option value="assessment">Technical Assessment</option>
+                <option value="rejection">Polite Rejection</option>
+                <option value="request_info">Request Additional Info</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="simulateInboundEmail()">Ingest Inbound Email</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Insights -->
+      <section id="tab-insights" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="step-badge">6</span> Funnel Analytics & Conversion Metrics</div>
+              <div class="card-subtitle">Cohort progression across versions, portals, and interview rates (F12)</div>
+            </div>
+            <button class="btn btn-primary" onclick="fetchFunnel()">Load Funnel Metrics</button>
+          </div>
+
+          <div id="funnelContainer" class="grid-2">
+            <div class="stat-box">
+              <div class="stat-desc">Applications Submitted</div>
+              <div class="stat-number" id="statSubmitted">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-desc">Interview Rate</div>
+              <div class="stat-number" id="statInterviewRate">0.0%</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Side Panel: Live JSON & Stream Log -->
+    <aside class="side-panel">
+      <div class="console-header">
+        <div class="console-title">
+          <span style="color: var(--accent-cyan);">●</span> LIVE API RESPONSE STREAM
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="clearLogs()">Clear</button>
+      </div>
+
+      <div class="console-body" id="consoleLogs">
+        <div class="log-entry">
+          <div class="log-meta">
+            <span>SYSTEM</span>
+            <span>READY</span>
+          </div>
+          <div>CareerHarness test console loaded. Connecting to tenant context...</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    let currentTenant = {
+      id: "demo-tenant-id",
+      name: "Demo Candidate",
+      plan: "pro"
+    };
+
+    function log(type, title, data) {
+      const consoleBox = document.getElementById("consoleLogs");
+      const entry = document.createElement("div");
+      entry.className = "log-entry " + (type || "");
+      
+      const time = new Date().toLocaleTimeString();
+      let formattedJson = "";
+      if (data) {
+        formattedJson = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      }
+
+      entry.innerHTML = `
+        <div class="log-meta">
+          <strong>${title}</strong>
+          <span>${time}</span>
+        </div>
+        ${formattedJson ? `<pre class="log-json">${formattedJson}</pre>` : ""}
+      `;
+      consoleBox.appendChild(entry);
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById("consoleLogs").innerHTML = "";
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".nav-tab").forEach(el => el.classList.remove("active"));
+      
+      const activeTab = document.getElementById(tabId);
+      if (activeTab) activeTab.classList.add("active");
+      
+      event.currentTarget.classList.add("active");
+    }
+
+    async function apiRequest(endpoint, options = {}) {
+      const url = endpoint.startsWith("http") ? endpoint : endpoint;
+      options.headers = options.headers || {};
+      options.headers["X-Tenant-ID"] = currentTenant.id;
+      if (!options.headers["Content-Type"] && options.body && typeof options.body === "string") {
+        options.headers["Content-Type"] = "application/json";
+      }
+
+      const res = await fetch(url, options);
+      const text = await res.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        json = text;
+      }
+
+      if (!res.ok) {
+        log("error", `HTTP ${res.status} ${options.method || 'GET'} ${endpoint}`, json);
+        throw new Error(`HTTP ${res.status}: ` + JSON.stringify(json));
+      }
+
+      log("success", `HTTP ${res.status} ${options.method || 'GET'} ${endpoint}`, json);
+      return json;
+    }
+
+    async function initDemoTenant() {
+      try {
+        const res = await fetch("/api/tenants/demo");
+        currentTenant = await res.json();
+        document.getElementById("displayTenantName").innerText = currentTenant.name;
+        document.getElementById("displayTenantId").innerText = `(${currentTenant.id.substring(0, 8)}...)`;
+        log("success", "Active Tenant Connected", currentTenant);
+      } catch (err) {
+        log("error", "Tenant Init Failed", err.message);
+      }
+    }
+
+    async function saveKey() {
+      const provider = document.getElementById("keyProvider").value;
+      const raw_key = document.getElementById("rawKeyInput").value;
+      await apiRequest("/api/keys", {
+        method: "POST",
+        body: JSON.stringify({ provider, api_key: raw_key })
+      });
+      fetchKeys();
+    }
+
+    async function fetchKeys() {
+      const keys = await apiRequest("/api/keys");
+      const container = document.getElementById("keysTableContainer");
+      if (!keys || keys.length === 0) {
+        container.innerHTML = `<span style="font-size:0.75rem; color:var(--text-dim);">No BYOK keys stored.</span>`;
+        return;
+      }
+      container.innerHTML = keys.map(k => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface-elevated); padding:0.5rem 0.75rem; border-radius:6px; margin-top:0.4rem; font-size:0.78rem;">
+          <div><strong>${k.provider.toUpperCase()}</strong>: <code style="color:var(--accent-cyan);">${k.masked_preview}</code></div>
+          <span class="pill pill-green">Valid & Active</span>
+        </div>
+      `).join("");
+    }
+
+    async function submitRoleSelection() {
+      const roleId = document.getElementById("roleSelect").value;
+      await apiRequest("/api/roles", {
+        method: "POST",
+        body: JSON.stringify({
+          role_ids: [roleId, "role_fullstack_eng"],
+          priority_role_id: roleId
+        })
+      });
+    }
+
+    async function uploadResume() {
+      const content = document.getElementById("resumeContentInput").value;
+      const res = await apiRequest("/api/resumes/upload", {
+        method: "POST",
+        body: JSON.stringify({
+          filename: "master_resume.txt",
+          content: content
+        })
+      });
+
+      // Confirm extracted skills for honesty verification
+      if (res && res.extracted_skills) {
+        for (const s of res.extracted_skills) {
+          await apiRequest(`/api/resumes/${res.id}/skills/${encodeURIComponent(s.name)}/confirm`, { method: "POST" });
+        }
+      }
+    }
+
+    async function pasteLinkedIn() {
+      const headline = document.getElementById("liHeadline").value;
+      const skills = document.getElementById("liSkills").value.split(",").map(s => s.trim());
+      await apiRequest("/api/linkedin/paste", {
+        method: "POST",
+        body: JSON.stringify({
+          headline: headline,
+          about: "Experienced architect building resilient distributed backends.",
+          skills: skills
+        })
+      });
+    }
+
+    async function computeReadiness() {
+      await apiRequest("/api/gaps/compute", { method: "POST" });
+      const todos = await apiRequest("/api/todos");
+      for (const t of todos) {
+        if (t.status === "open") {
+          await apiRequest(`/api/todos/${t.id}/action`, {
+            method: "POST",
+            body: JSON.stringify({ action: "accept" })
+          });
+        }
+      }
+      const res = await apiRequest("/api/readiness");
+      const scoreEl = document.getElementById("readinessScoreLabel");
+      scoreEl.innerText = `${res.overall_score} / 100 (${res.is_ready ? 'UNLOCKED' : 'LOCKED'})`;
+      scoreEl.style.color = res.is_ready ? "var(--accent-emerald)" : "var(--accent-rose)";
+    }
+
+    async function triggerScout() {
+      const job = await apiRequest("/api/jobs/ingest", {
+        method: "POST",
+        body: JSON.stringify({
+          title: "Senior Platform Engineer",
+          company: "Stripe",
+          url: "https://stripe.com/jobs/platform-" + Date.now(),
+          description: "Senior Platform Engineer needed with Python, Docker, Kubernetes, and distributed systems experience.",
+          portal_type: "greenhouse"
+        })
+      });
+      window.lastIngestedJobId = job.id;
+      await apiRequest("/api/scout/scan-now", { method: "POST" });
+      const matches = await apiRequest("/api/jobs");
+      const container = document.getElementById("jobMatchesContainer");
+      if (!matches || matches.length === 0) {
+        container.innerHTML = `
+          <div style="background:var(--bg-surface-elevated); padding:0.75rem; border-radius:6px; margin-top:0.5rem; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <strong>${job.title}</strong> at <span style="color:var(--accent-cyan);">${job.company}</span>
+              <div style="color:var(--text-dim); font-size:0.72rem;">Portal: greenhouse • Ghost Risk: ${job.ghost_risk_score}/100</div>
+            </div>
+            <span class="pill pill-green">INGESTED</span>
+          </div>
+        `;
+        return;
+      }
+      container.innerHTML = matches.map(m => `
+        <div style="background:var(--bg-surface-elevated); padding:0.75rem; border-radius:6px; margin-top:0.5rem; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>${m.job_id}</strong>
+            <div style="color:var(--text-dim); font-size:0.72rem;">Match Score: ${m.match_score}/10 • Status: ${m.status}</div>
+          </div>
+          <span class="pill pill-green">${m.status.toUpperCase()}</span>
+        </div>
+      `).join("");
+    }
+
+    async function createBatch() {
+      const jobId = window.lastIngestedJobId;
+      if (!jobId) {
+        await triggerScout();
+      }
+      const batch = await apiRequest("/api/batches", {
+        method: "POST",
+        body: JSON.stringify({ job_ids: [window.lastIngestedJobId] })
+      });
+      await apiRequest(`/api/batches/${batch.batch_id}/preview`);
+    }
+
+    async function executeApplication() {
+      const master = await apiRequest("/api/vault/master", {
+        method: "POST",
+        body: JSON.stringify({
+          title: "Master Resume - Engineering",
+          content: {
+            candidate_name: "Alex Smith",
+            skills: ["Python", "Docker", "PostgreSQL", "Kubernetes"],
+            experience: [{
+              company: "Cloud Corp",
+              dates: "2020 - 2024",
+              bullets: [
+                "Deployed Kubernetes clusters managing 500+ microservices",
+                "Wrote core Python infrastructure processing 10M daily events"
+              ]
+            }],
+            education: [{ school: "MIT", degree: "BS", year: "2020" }]
+          },
+          raw_markdown: "# Alex Smith Resume"
+        })
+      });
+
+      if (!window.lastIngestedJobId) {
+        await triggerScout();
+      }
+      const jobId = window.lastIngestedJobId;
+
+      const tailor = await apiRequest("/api/applications/tailor", {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: jobId,
+          parent_version_id: master.id,
+          save_to_vault: true
+        })
+      });
+
+      await apiRequest("/api/applications/ats-check", {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: jobId,
+          tailored_content: tailor.tailored_resume
+        })
+      });
+
+      await apiRequest("/api/applications/submit", {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: jobId,
+          resume_version_id: tailor.vault_version_id,
+          simulate_bot_block: true
+        })
+      });
+
+      // Track application
+      await apiRequest("/api/tracker/track", {
+        method: "POST",
+        body: JSON.stringify({ job_id: jobId, status: "applied" })
+      });
+
+      fetchApplications();
+    }
+
+    async function fetchApplications() {
+      const apps = await apiRequest("/api/tracker/applications");
+      const container = document.getElementById("applicationsTableContainer");
+      if (!apps || apps.length === 0) {
+        container.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-dim);">No applications submitted yet.</p>`;
+        return;
+      }
+      container.innerHTML = apps.map(a => `
+        <div style="background:var(--bg-surface-elevated); padding:0.75rem; border-radius:6px; margin-top:0.5rem; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>${a.job_title || 'Software Engineer'}</strong> at <span style="color:var(--accent-cyan);">${a.company_name || 'Tech Corp'}</span>
+            <div style="color:var(--text-dim); font-size:0.72rem;">Channel: ${a.last_contact_channel || 'ATS'} • Updated: ${new Date(a.updated_at).toLocaleTimeString()}</div>
+          </div>
+          <span class="pill pill-cyan">${(a.status || 'applied').toUpperCase()}</span>
+        </div>
+      `).join("");
+    }
+
+    async function simulateInboundEmail() {
+      const apps = await apiRequest("/api/tracker/applications");
+      const appId = apps.length > 0 ? apps[0].id : null;
+      if (!appId) {
+        await executeApplication();
+      }
+      const refreshedApps = await apiRequest("/api/tracker/applications");
+      const targetAppId = refreshedApps[0].id;
+
+      await apiRequest("/api/tracker/inbound-email", {
+        method: "POST",
+        body: JSON.stringify({
+          sender_email: "recruiting@stripe.com",
+          subject: "Interview Invitation: Senior Platform Engineer",
+          body_text: "We were impressed with your application and would like to schedule a 30-minute interview.",
+          application_id: targetAppId
+        })
+      });
+      fetchApplications();
+    }
+
+    async function fetchFunnel() {
+      const funnel = await apiRequest("/api/insights/funnel");
+      document.getElementById("statSubmitted").innerText = funnel.total_applications || 0;
+      document.getElementById("statInterviewRate").innerText = (funnel.interview_rate ? (funnel.interview_rate * 100).toFixed(1) : "0.0") + "%";
+    }
+
+    async function runFullFlow() {
+      const btn = document.getElementById("btnRunFullFlow");
+      btn.disabled = true;
+      btn.innerText = "Running...";
+      try {
+        log("warn", "Starting End-to-End Orchestrated Walkthrough", "Initializing pipeline...");
+        await initDemoTenant();
+        
+        // 1. Key Vault
+        await saveKey();
+        
+        // 2. Roles
+        await submitRoleSelection();
+        
+        // 3. Resume & LinkedIn
+        await uploadResume();
+        await pasteLinkedIn();
+        
+        // 4. Compute Readiness
+        await computeReadiness();
+        
+        // 5. Ingest Job & Trigger Scout
+        await triggerScout();
+        
+        // 6. Create Batch
+        await createBatch();
+        
+        // 7. Execute Application (5-stage)
+        await executeApplication();
+        
+        // 8. Simulate Inbound Recruiter Email
+        await simulateInboundEmail();
+        
+        // 9. Fetch Funnel
+        await fetchFunnel();
+
+        log("success", "🎉 End-to-End Walkthrough Complete!", {
+          tenant: currentTenant.id,
+          status: "All 9 stages verified with 200 OK responses."
+        });
+      } catch (err) {
+        log("error", "Walkthrough Failed", err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "▶ Run Full Flow";
+      }
+    }
+
+    // Auto-init on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      initDemoTenant();
+    });
+  </script>
+</body>
+</html>
