@@ -5,7 +5,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import gaps, health, keys, linkedin, resumes, roles, runs
+from app.api.routers import (
+    batches,
+    emails,
+    gaps,
+    health,
+    jobs,
+    keys,
+    linkedin,
+    resumes,
+    roles,
+    runs,
+    scout,
+)
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -53,3 +65,7 @@ app.include_router(roles.router)
 app.include_router(resumes.router)
 app.include_router(linkedin.router)
 app.include_router(gaps.router)
+app.include_router(emails.router)
+app.include_router(scout.router)
+app.include_router(jobs.router)
+app.include_router(batches.router)

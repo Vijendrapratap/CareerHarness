@@ -81,6 +81,168 @@ class Tenant(Base):
     consents: Mapped[list["Consent"]] = relationship(
         "Consent", back_populates="tenant", cascade="all, delete-orphan"
     )
+    connected_emails: Mapped[list["ConnectedEmail"]] = relationship(
+        "ConnectedEmail", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    scout_schedules: Mapped[list["ScoutSchedule"]] = relationship(
+        "ScoutSchedule", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    job_matches: Mapped[list["JobMatch"]] = relationship(
+        "JobMatch", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    batches: Mapped[list["Batch"]] = relationship(
+        "Batch", back_populates="tenant", cascade="all, delete-orphan"
+    )
+
+
+class ConnectedEmail(Base):
+    """Connected mailbox for hiring-manager outreach and reply parsing (F6)."""
+    __tablename__ = "connected_emails"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), default="gmail")  # gmail or outlook
+    email_address: Mapped[str] = mapped_column(String(255), nullable=False)
+    access_token_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    refresh_token_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    token_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="connected_emails")
+
+
+class ScoutSchedule(Base):
+    """Automated and on-demand Scout scan scheduler (F7, RD-02, RD-03)."""
+    __tablename__ = "scout_schedules"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    cadence: Mapped[str] = mapped_column(String(32), default="daily")  # daily (Free) or hourly (Pro)
+    last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    manual_scans_today: Mapped[int] = mapped_column(Integer, default=0)
+    last_manual_scan_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="scout_schedules")
+
+
+class JobListing(Base):
+    """Scouted job listings with portal classification and legitimacy flags (F8)."""
+    __tablename__ = "job_listings"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    company: Mapped[str] = mapped_column(String(255), nullable=False)
+    url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    location: Mapped[str] = mapped_column(String(255), default="Remote")
+    salary_min: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    salary_max: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    portal_type: Mapped[str] = mapped_column(String(64), default="greenhouse")  # greenhouse, lever, workday, direct
+    is_ghost_job: Mapped[bool] = mapped_column(Boolean, default=False)
+    ghost_risk_score: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    __table_args__ = (
+        Index("ix_job_listings_dedup", "company", "url", unique=True),
+    )
+
+
+class JobMatch(Base):
+    """Candidate-specific matched jobs scored by Analyst agent (F8)."""
+    __tablename__ = "job_matches"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("job_listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    match_score: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0 to 10.0
+    why_matched: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(
+        String(32), default="new"
+    )  # new, saved, batch_queued, applied, dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="job_matches")
+    job: Mapped["JobListing"] = relationship("JobListing")
+
+
+class Batch(Base):
+    """Batch apply group managing fan-out execution (F8, BA-01..04)."""
+    __tablename__ = "batches"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    total_jobs: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(
+        String(32), default="created"
+    )  # created, previewing, approved, running, completed, partial_failed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="batches")
+    items: Mapped[list["BatchItem"]] = relationship(
+        "BatchItem", back_populates="batch", cascade="all, delete-orphan"
+    )
+
+
+class BatchItem(Base):
+    """Individual child task in a batch apply run (BA-02, RT-01)."""
+    __tablename__ = "batch_items"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    batch_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("batches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("job_listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    resume_version_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    cover_letter_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    apply_channel: Mapped[str] = mapped_column(
+        String(32), default="ats_autofill"
+    )  # ats_autofill, email_apply, handoff
+    status: Mapped[str] = mapped_column(
+        String(32), default="pending"
+    )  # pending, tailoring, tailored, applying, applied, failed, handoff_ready
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    batch: Mapped["Batch"] = relationship("Batch", back_populates="items")
+    job: Mapped["JobListing"] = relationship("JobListing")
+
+    __table_args__ = (
+        Index("ix_batch_item_idempotency", "tenant_id", "job_id", "apply_channel", unique=True),
+    )
 
 
 class RoleCatalog(Base):
