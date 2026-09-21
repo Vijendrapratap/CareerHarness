@@ -64,9 +64,14 @@ DEFAULT_MODEL_MAP: Dict[str, Dict[TaskTier, str]] = {
         "frontier": "gemini-1.5-pro",
     },
     "openrouter": {
-        "cheap": "meta-llama/llama-3.3-70b-instruct",
-        "mid": "anthropic/claude-3.5-sonnet",
-        "frontier": "openai/gpt-4o",
+        "cheap": "deepseek/deepseek-chat-v4.1",
+        "mid": "deepseek/deepseek-chat-v4.1",
+        "frontier": "deepseek/deepseek-r1",
+    },
+    "deepseek": {
+        "cheap": "deepseek-chat",
+        "mid": "deepseek-chat",
+        "frontier": "deepseek-reasoner",
     },
 }
 
@@ -77,8 +82,15 @@ class ModelRouter:
     def __init__(self, http_client: Optional[httpx.AsyncClient] = None):
         self._http = http_client
 
-    def model_for(self, provider: str, tier: TaskTier) -> str:
+    def model_for(
+        self,
+        provider: str,
+        tier: TaskTier,
+        model_override: Optional[str] = None,
+    ) -> str:
         """Returns the appropriate model string for provider and task tier."""
+        if model_override:
+            return model_override
         clean_provider = provider.lower().strip()
         models = DEFAULT_MODEL_MAP.get(clean_provider)
         if not models:
@@ -112,9 +124,10 @@ class ModelRouter:
         system_prompt: str,
         messages: List[Dict[str, str]],
         tools: Optional[List[Dict[str, Any]]] = None,
+        model_override: Optional[str] = None,
     ) -> LLMResponse:
         """Invokes upstream model using the decrypted in-memory key."""
-        model = self.model_for(provider, tier)
+        model = self.model_for(provider, tier, model_override=model_override)
 
         # Intercept test error injection strings
         if "invalid" in raw_key:

@@ -24,6 +24,12 @@ async def test_model_router_tier_resolution():
     assert router.model_for("openai", "mid") == "gpt-4o"
     assert router.model_for("gemini", "mid") == "gemini-1.5-pro"
 
+    # OpenRouter DeepSeek Flash v4.1
+    assert router.model_for("openrouter", "cheap") == "deepseek/deepseek-chat-v4.1"
+    assert router.model_for("openrouter", "mid") == "deepseek/deepseek-chat-v4.1"
+    assert router.model_for("openrouter", "cheap", model_override="deepseek/deepseek-flash-v4.1") == "deepseek/deepseek-flash-v4.1"
+    assert router.model_for("deepseek", "cheap") == "deepseek-chat"
+
     # Unsupported provider raises ValueError
     with pytest.raises(ValueError):
         router.model_for("unknown_provider", "mid")
