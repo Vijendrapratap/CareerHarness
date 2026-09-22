@@ -18,6 +18,7 @@ interface ReadinessData {
   is_ready: boolean;
   overall_score: number;
   open_criticals: number;
+  is_capped: boolean;
 }
 
 export default function TodosPage() {
@@ -56,23 +57,25 @@ export default function TodosPage() {
     ]);
     setTodos(todoList.filter((t) => t.status === "open"));
     setReadiness(readinessInfo);
-
-    // Check if ready to advance
-    const refreshRes = await api<{ stage: string }>("/api/journey/refresh", {
-      method: "POST",
-    });
-    if (refreshRes.stage === "mailbox") {
-      window.location.assign("/mailbox");
-    }
   }
 
   async function handleAction(todoId: string, action: "accept" | "dismiss") {
+    let dismissReason: string | undefined;
+    if (action === "dismiss") {
+      const reason = window.prompt("Why are you dismissing this item? (logged, min 5 characters)");
+      if (reason === null) return;
+      if (reason.trim().length < 5) {
+        setError("A dismiss reason of at least 5 characters is required.");
+        return;
+      }
+      dismissReason = reason.trim();
+    }
     setActionLoading(todoId);
     setError(null);
     try {
       await api(`/api/todos/${todoId}`, {
         method: "POST",
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, dismiss_reason: dismissReason }),
       });
       await loadData();
     } catch (err: unknown) {
@@ -87,7 +90,7 @@ export default function TodosPage() {
   }
 
   return (
-    <Shell title="Front-Face To-Dos">
+    <Shell title="Profile Tips">
       <div className="w-full space-y-6">
         {/* Readiness Overview */}
         <div
@@ -100,7 +103,7 @@ export default function TodosPage() {
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-xs uppercase tracking-wider text-muted font-bold">
-                Readiness Evaluation
+                Profile Strength
               </span>
               <span
                 className={`text-[10px] py-0.5 px-2.5 rounded-full font-bold uppercase tracking-wider ${
@@ -109,24 +112,24 @@ export default function TodosPage() {
                     : "bg-amber-100 text-amber-800 border border-amber-300"
                 }`}
               >
-                {readiness?.is_ready ? "Gate Passed ⚡" : "Autonomous Gate 🛡️"}
+                {readiness?.is_ready ? "Strong ⚡" : "Optional tips"}
               </span>
             </div>
             <h2 className="text-lg font-bold text-ink">
               {readiness?.is_ready ? (
                 <span className="text-emerald-700 flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50" />
-                  Ready to Scout & Hunt
+                  Recruiter-ready profile
                 </span>
               ) : (
                 <span className="text-amber-800 flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
-                  Gate Locked (Score ≥ 70 & 0 Criticals Required)
+                  Scout is already running — these fixes raise your reply rate
                 </span>
               )}
             </h2>
             <p className="text-xs text-muted mt-1">
-              Dismissing a critical to-do permanently caps your score at 69.
+              Tips are optional and never block scouting. Dismissing a critical tip caps this score at 69.
             </p>
           </div>
 
@@ -175,22 +178,26 @@ export default function TodosPage() {
         {loading ? (
           <div className="neo-card p-10 text-center text-muted">
             <div className="inline-block h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin mb-3" />
-            <p className="text-sm">Analyzing your resume and profile gaps with DeepSeek...</p>
+            <p className="text-sm">Checking your resume and profile...</p>
           </div>
         ) : todos.length === 0 ? (
           <div className="neo-card p-10 text-center space-y-4 border border-emerald-200/80 bg-gradient-to-b from-white to-emerald-50/30">
             <div className="inline-flex h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white items-center justify-center text-2xl font-bold mb-1 shadow-lg shadow-emerald-500/20">
               ✓
             </div>
-            <h3 className="text-xl font-bold text-ink">Zero Open To-Dos</h3>
+            <h3 className="text-xl font-bold text-ink">No Open Tips</h3>
             <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
-              Your profile satisfies all front-face standards and your readiness score allows automated job scouting and recruiter outreach.
+              {readiness?.is_ready
+                ? "Your profile is in great shape for recruiters."
+                : readiness?.is_capped
+                ? `Score ${readiness.overall_score}/100 — capped at 69 because a critical tip was dismissed.`
+                : `Score ${readiness?.overall_score ?? 0}/100. Adding your LinkedIn headline and more quantified resume bullets in Counsel raises it.`}
             </p>
             <button
-              onClick={() => window.location.assign("/mailbox")}
+              onClick={() => window.location.assign("/jobs")}
               className="btn-teal px-7 py-3 text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-teal-500/20 active:scale-[0.97]"
             >
-              Continue to Mailbox Connection →
+              Back to Jobs →
             </button>
           </div>
         ) : (
@@ -221,7 +228,7 @@ export default function TodosPage() {
                     </span>
 
                     <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                      {isCritical ? "Blocks Scouting" : "Advisory Fix"}
+                      {isCritical ? "High impact" : "Nice to have"}
                     </span>
                   </div>
 

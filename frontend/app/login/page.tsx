@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { LogoMark } from "@/components/Logo";
+import { api, goToCurrentStage } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      window.location.assign("/counsel");
+      await goToCurrentStage();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -35,9 +36,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-wash">
       <div className="neo-card w-full max-w-md p-8 relative overflow-hidden">
         <div className="mb-6 text-center">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-teal-600/20 mb-3 border border-teal-400/40">
-            CH
-          </div>
+          <LogoMark size={56} className="mx-auto mb-4 drop-shadow-[0_10px_18px_rgba(18,20,28,0.3)]" />
           <span className="badge-cyan text-xs font-semibold py-0.5 px-2.5">Candidate Career Platform</span>
           <h1 className="text-2xl font-bold text-ink mt-2">Sign In</h1>
           <p className="text-xs text-muted mt-1">Enter your credentials to access your candidate journey.</p>

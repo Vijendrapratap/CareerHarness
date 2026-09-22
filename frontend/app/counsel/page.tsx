@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Shell } from "@/components/Shell";
-import { api } from "@/lib/api";
+import { api, pageForStage } from "@/lib/api";
 import { listenOnce } from "@/lib/speech";
+import { FactQuestion } from "@/components/FactQuestion";
 
 type OnboardingStage = "resume" | "linkedin" | "target_jobs" | "live_chat";
 
@@ -54,6 +55,8 @@ export default function CounselPage() {
 
   // LinkedIn State
   const [linkedinInput, setLinkedinInput] = useState("");
+  const [linkedinHeadline, setLinkedinHeadline] = useState("");
+  const [resumeDone, setResumeDone] = useState(false);
   const [savingLinkedin, setSavingLinkedin] = useState(false);
 
   // Target Roles State
@@ -63,19 +66,6 @@ export default function CounselPage() {
   const [savingRoles, setSavingRoles] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
 
-  // Preferences State (Screen 4 Profile Section)
-  const [workArrangement, setWorkArrangement] = useState<string>("Remote Only");
-  const [targetLocation, setTargetLocation] = useState<string>("US Remote / Tech Hubs");
-  const [authorization, setAuthorization] = useState<string>(
-    "Authorized (No Sponsorship Required)"
-  );
-  const [leadershipTrack, setLeadershipTrack] = useState<"ic" | "lead">("ic");
-  const [selectedDealbreakers, setSelectedDealbreakers] = useState<string[]>([
-    "Legacy Monolithic Codebases",
-    "Uncompensated 24/7 On-Call Rotations",
-  ]);
-  const [prefsSavedFeedback, setPrefsSavedFeedback] = useState(false);
-
   // Live Chat State (Optional / Advisory)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInputText, setChatInputText] = useState("");
@@ -83,8 +73,11 @@ export default function CounselPage() {
   const [sendingChat, setSendingChat] = useState(false);
   const [listening, setListening] = useState(false);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [finalizingPersona, setFinalizingPersona] = useState(false);
+  const [confirmedSkills, setConfirmedSkills] = useState<string[]>([]);
+  const [savingSkills, setSavingSkills] = useState(false);
+  const [skillsSaved, setSkillsSaved] = useState(false);
+  const [factsVersion, setFactsVersion] = useState(0);
 
   // Live Persona State
   const [persona, setPersona] = useState<PersonaState>({
@@ -96,27 +89,29 @@ export default function CounselPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    initOnboarding();
+    // A superseded run (StrictMode double-invoke, fast navigation) must not apply stale state.
+    let cancelled = false;
+    initOnboarding(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isAiTyping]);
 
-  async function initOnboarding() {
+  async function initOnboarding(isCancelled: () => boolean) {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch market catalog roles
-      const catalog = await api<CatalogRole[]>("/api/roles/catalog").catch(() => []);
+      const [catalog, counselState, selectedRolesData] = await Promise.all([
+        api<CatalogRole[]>("/api/roles/catalog").catch(() => []),
+        api<any>("/api/counsel").catch(() => null),
+        api<any[]>("/api/roles").catch(() => []),
+      ]);
+      if (isCancelled()) return;
       setCatalogRoles(catalog);
-
-      // 2. Fetch existing counsel state
-      const counselState = await api<any>("/api/counsel").catch(() => null);
-      if (counselState?.done) {
-        window.location.assign("/todos");
-        return;
-      }
 
       // Check existing history to determine where candidate is
       const history: Array<{ step: string; answer: string }> = counselState?.history || [];
@@ -136,13 +131,8 @@ export default function CounselPage() {
         preferences: histMap.preferences,
       };
 
-      if (histMap.management) {
-        initialPersona.management = histMap.management.toLowerCase().includes("yes");
-        setLeadershipTrack(initialPersona.management ? "lead" : "ic");
-      }
+      setResumeDone(Boolean(histMap.resume));
 
-      // Check selected roles
-      const selectedRolesData = await api<any[]>("/api/roles").catch(() => []);
       if (Array.isArray(selectedRolesData) && selectedRolesData.length > 0) {
         const roleIds = selectedRolesData.map((r) => r.role_id || r.id);
         setSelectedRoleIds(roleIds);
@@ -155,7 +145,7 @@ export default function CounselPage() {
       // Determine starting screen based on completed information
       if (histMap.target_work || selectedRolesData.length > 0) {
         setCurrentStage("live_chat");
-        startLiveChatSession(initialPersona);
+        startLiveChatSession(initialPersona, catalog);
       } else if (histMap.linkedin) {
         setCurrentStage("target_jobs");
       } else if (histMap.resume) {
@@ -170,7 +160,7 @@ export default function CounselPage() {
         setError("Failed to initialize onboarding");
       }
     } finally {
-      setLoading(false);
+      if (!isCancelled()) setLoading(false);
     }
   }
 
@@ -204,7 +194,9 @@ export default function CounselPage() {
         throw new Error(message);
       }
       const data = await res.json();
-      const extractedSkills = Array.isArray(data.extracted_skills) ? data.extracted_skills : [];
+      const extractedSkills: string[] = Array.isArray(data.extracted_skills)
+        ? data.extracted_skills.map((s: { name: string } | string) => (typeof s === "string" ? s : s.name))
+        : [];
       const refId = data.id || file.name;
 
       const resumeInfo = {
@@ -215,6 +207,8 @@ export default function CounselPage() {
       };
 
       setUploadedResume(resumeInfo);
+      setConfirmedSkills([]);
+      setSkillsSaved(false);
       setPersona((prev) => ({
         ...prev,
         resumeFilename: file.name,
@@ -222,7 +216,7 @@ export default function CounselPage() {
         extractedSkills,
       }));
 
-      // Automatically record resume answer in counsel flow
+      // Record resume answer in counsel flow
       await api("/api/counsel/answer", {
         method: "POST",
         body: JSON.stringify({
@@ -230,7 +224,8 @@ export default function CounselPage() {
           text: refId,
           input_mode: "text",
         }),
-      }).catch(() => null);
+      });
+      setResumeDone(true);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -242,13 +237,29 @@ export default function CounselPage() {
     }
   }
 
+  async function handleConfirmResumeSkills() {
+    setSavingSkills(true);
+    setError(null);
+    try {
+      await api("/api/fit/fixes/confirm-skills", {
+        method: "POST",
+        body: JSON.stringify({ skills: confirmedSkills }),
+      });
+      setSkillsSaved(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not save your skills");
+    } finally {
+      setSavingSkills(false);
+    }
+  }
+
   function handleResumeChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) processResumeFile(file);
   }
 
   function handleContinueFromResume() {
-    if (!uploadedResume) {
+    if (!hasResume) {
       setError("Please upload your resume PDF before continuing.");
       return;
     }
@@ -262,8 +273,16 @@ export default function CounselPage() {
   async function handleSaveLinkedin(skip: boolean = false) {
     setError(null);
     setSavingLinkedin(true);
-    const valueToSave = skip || !linkedinInput.trim() ? "[Skipped]" : linkedinInput.trim();
+    const headline = skip ? "" : linkedinHeadline.trim();
+    const url = skip ? "" : linkedinInput.trim();
+    const valueToSave = url || headline || "[Skipped]";
     try {
+      if (headline) {
+        await api("/api/linkedin/paste", {
+          method: "POST",
+          body: JSON.stringify({ headline }),
+        });
+      }
       await api("/api/counsel/answer", {
         method: "POST",
         body: JSON.stringify({
@@ -271,11 +290,11 @@ export default function CounselPage() {
           text: valueToSave,
           input_mode: "text",
         }),
-      }).catch(() => null);
+      });
 
       setPersona((prev) => ({
         ...prev,
-        linkedinUrl: skip ? undefined : valueToSave,
+        linkedinUrl: valueToSave === "[Skipped]" ? undefined : valueToSave,
       }));
 
       setCurrentStage("target_jobs");
@@ -325,27 +344,15 @@ export default function CounselPage() {
     try {
       const primaryRole = selectedRoleIds[0];
 
-      // 1. Post to /api/roles
-      await api("/api/roles", {
-        method: "POST",
-        body: JSON.stringify({
-          role_ids: selectedRoleIds,
-          mgmt_experience: leadershipTrack === "lead",
-          priority_role_id: primaryRole,
-        }),
-      }).catch(() => null);
-
-      // 2. Record target_work and priority_role in counsel sections
-      const rolesSummary = selectedRoleIds.join(", ");
+      // 1. Record target_work and priority_role in counsel sections
       await api("/api/counsel/answer", {
         method: "POST",
         body: JSON.stringify({
           step: "target_work",
-          text: rolesSummary,
+          text: selectedRoleIds.join(", "),
           input_mode: "text",
         }),
-      }).catch(() => null);
-
+      });
       await api("/api/counsel/answer", {
         method: "POST",
         body: JSON.stringify({
@@ -353,7 +360,17 @@ export default function CounselPage() {
           text: primaryRole,
           input_mode: "text",
         }),
-      }).catch(() => null);
+      });
+
+      // 2. Save the candidate's exact selection last so it is what sticks
+      await api("/api/roles", {
+        method: "POST",
+        body: JSON.stringify({
+          role_ids: selectedRoleIds,
+          mgmt_experience: false,
+          priority_role_id: primaryRole,
+        }),
+      });
 
       const updatedPersona: PersonaState = {
         ...persona,
@@ -378,61 +395,20 @@ export default function CounselPage() {
   // --------------------------------------------------------------------------
   // STAGE 4: EXPERT COUNSELLOR DIAGNOSIS & PREFERENCES SECTION
   // --------------------------------------------------------------------------
-  async function persistPreferences(
-    updates: {
-      workArrangement?: string;
-      targetLocation?: string;
-      authorization?: string;
-      leadershipTrack?: "ic" | "lead";
-      dealbreakers?: string[];
-    } = {}
-  ) {
-    const wa = updates.workArrangement || workArrangement;
-    const loc = updates.targetLocation || targetLocation;
-    const auth = updates.authorization || authorization;
-    const lead = (updates.leadershipTrack || leadershipTrack) === "lead";
-    const deals = updates.dealbreakers || selectedDealbreakers;
-
-    try {
-      await api("/api/counsel/preferences", {
-        method: "POST",
-        body: JSON.stringify({
-          work_arrangement: wa,
-          location: loc,
-          authorization: auth,
-          management: lead,
-          dealbreakers: deals,
-          preferences: `Prefers ${wa} in ${loc}. Visa: ${auth}`,
-        }),
-      }).catch(() => null);
-
-      setPrefsSavedFeedback(true);
-      setTimeout(() => setPrefsSavedFeedback(false), 2000);
-    } catch {
-      // Non-blocking background sync
-    }
-  }
-
-  function toggleDealbreaker(item: string) {
-    const updated = selectedDealbreakers.includes(item)
-      ? selectedDealbreakers.filter((d) => d !== item)
-      : [...selectedDealbreakers, item];
-    setSelectedDealbreakers(updated);
-    persistPreferences({ dealbreakers: updated });
-  }
-
-  function startLiveChatSession(currentPersona: PersonaState) {
+  function startLiveChatSession(currentPersona: PersonaState, catalog: CatalogRole[] = catalogRoles) {
     if (chatMessages.length > 0) return;
 
     const primaryRole =
       currentPersona.priorityRole || currentPersona.targetRoles[0] || "Senior Software Engineer";
-    const primaryTitle = primaryRole.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const primaryTitle =
+      catalog.find((r) => r.id === primaryRole)?.title ??
+      primaryRole.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
     const initialGreeting =
       `Hello! I'm your AI Executive Career Counsellor.\n\n` +
-      `I've analyzed your resume and market positioning for **${primaryTitle}**. ` +
+      `I've analyzed your resume and market positioning for ${primaryTitle}. ` +
       `I have identified your best-fit jobs and calibrated your profile above.\n\n` +
-      `You can fine-tune your search preferences with 1 click above, or ask me any questions about market compensation, technical interviews, or role requirements below. When you are ready, click **Launch Autonomous Scout** to proceed!`;
+      `Answer my questions above so I can score jobs properly, or ask me anything about your search below. When you are ready, click "Confirm & Scout My Jobs".`;
 
     setChatMessages([
       {
@@ -496,13 +472,26 @@ export default function CounselPage() {
       };
 
       setChatMessages((prev) => [...prev, assistantMsg]);
+
+      // What the counsellor picks up in conversation becomes a profile fact (and rescores jobs).
+      const detected = res.detected_attributes || {};
+      const facts: Record<string, unknown> = {};
+      if (detected.management === true) facts.seniority = "Manager / Lead";
+      if (detected.authorization === "Requires Visa Sponsorship") facts.needs_sponsorship = true;
+      if (typeof detected.authorization === "string" && detected.authorization.startsWith("Authorized")) {
+        facts.needs_sponsorship = false;
+      }
+      if (Object.keys(facts).length > 0) {
+        await api("/api/profile/facts", { method: "PATCH", body: JSON.stringify(facts) }).catch(() => null);
+        setFactsVersion((v) => v + 1);
+      }
     } catch {
       const fallbackMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content:
           "I've noted that! Your profile and target roles are well-calibrated. " +
-          "You can adjust preferences anytime above or click 'Launch Autonomous Scout' to move straight to your matched jobs.",
+          "You can adjust preferences anytime above or click 'Confirm & Scout My Jobs' to continue.",
         timestamp: "Just now",
       };
       setChatMessages((prev) => [...prev, fallbackMsg]);
@@ -534,11 +523,8 @@ export default function CounselPage() {
     setError(null);
     setFinalizingPersona(true);
     try {
-      // Ensure preferences are saved
-      await persistPreferences();
-      // Finalize counsel stage to unlock todos
-      await api("/api/counsel/finalize", { method: "POST" });
-      window.location.assign("/todos");
+      const { stage } = await api<{ stage: string }>("/api/counsel/finalize", { method: "POST" });
+      window.location.assign(pageForStage(stage));
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -562,10 +548,8 @@ export default function CounselPage() {
   });
 
   // Calculate top 3 recommended job diagnosis cards based on selections & resume
-  const diagnosisRoles =
-    selectedRoleIds.length > 0
-      ? selectedRoleIds
-      : ["role_backend_arch", "role_fullstack_eng", "role_ai_engineer"];
+  const diagnosisRoles = selectedRoleIds;
+  const hasResume = Boolean(uploadedResume) || resumeDone;
 
   return (
     <Shell title="Career Counsellor & Job Matching">
@@ -592,7 +576,6 @@ export default function CounselPage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-900">
                   Career Counsellor Engine
                 </span>
-                <span className="badge-sky text-[10px] py-0.5 px-2">DeepSeek Intelligence</span>
               </div>
               <h2 className="text-sm font-bold text-ink">
                 {currentStage === "resume" && "Step 1 of 4: Upload Resume (Required)"}
@@ -611,20 +594,20 @@ export default function CounselPage() {
               className={`px-3 py-2 text-xs font-bold rounded-xl transition-all ${
                 currentStage === "resume"
                   ? "neo-pressed text-teal-950 font-black border border-teal-500/50 bg-gradient-to-r from-teal-50 to-emerald-50 shadow-inner"
-                  : uploadedResume
+                  : hasResume
                   ? "bg-emerald-50/90 text-emerald-800 border border-emerald-300/80 hover:bg-emerald-100"
                   : "neo-raised text-muted hover:text-ink"
               }`}
             >
-              1. Resume {uploadedResume && "✓"}
+              1. Resume {hasResume && "✓"}
             </button>
 
             <button
               type="button"
               onClick={() => {
-                if (uploadedResume) setCurrentStage("linkedin");
+                if (hasResume) setCurrentStage("linkedin");
               }}
-              disabled={!uploadedResume}
+              disabled={!hasResume}
               className={`px-3 py-2 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
                 currentStage === "linkedin"
                   ? "neo-pressed text-sky-950 font-black border border-sky-500/50 bg-gradient-to-r from-sky-50 to-cyan-50 shadow-inner"
@@ -639,9 +622,9 @@ export default function CounselPage() {
             <button
               type="button"
               onClick={() => {
-                if (uploadedResume) setCurrentStage("target_jobs");
+                if (hasResume) setCurrentStage("target_jobs");
               }}
-              disabled={!uploadedResume}
+              disabled={!hasResume}
               className={`px-3 py-2 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
                 currentStage === "target_jobs"
                   ? "neo-pressed text-amber-950 font-black border border-amber-500/50 bg-gradient-to-r from-amber-50 to-orange-50 shadow-inner"
@@ -656,12 +639,12 @@ export default function CounselPage() {
             <button
               type="button"
               onClick={() => {
-                if (uploadedResume && selectedRoleIds.length > 0) {
+                if (hasResume && selectedRoleIds.length > 0) {
                   setCurrentStage("live_chat");
                   startLiveChatSession(persona);
                 }
               }}
-              disabled={!uploadedResume || selectedRoleIds.length === 0}
+              disabled={!hasResume || selectedRoleIds.length === 0}
               className={`px-3 py-2 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
                 currentStage === "live_chat"
                   ? "neo-pressed text-teal-950 font-black border border-teal-500/50 bg-gradient-to-r from-teal-50 via-emerald-50 to-cyan-50 shadow-inner"
@@ -671,17 +654,6 @@ export default function CounselPage() {
               4. Counselor & Matches
             </button>
 
-            {/* Quick Skip to Scout Action */}
-            {currentStage === "live_chat" && (
-              <button
-                type="button"
-                onClick={handleFinalizePersona}
-                disabled={finalizingPersona}
-                className="btn-amber px-4 py-2 text-xs font-bold uppercase tracking-wider ml-2 shadow-sm"
-              >
-                {finalizingPersona ? "Loading..." : "Scout My Jobs →"}
-              </button>
-            )}
           </div>
         </div>
 
@@ -700,10 +672,13 @@ export default function CounselPage() {
         {/* ==================================================================== */}
         {/* SCREEN 1: UPLOAD RESUME (VERY FIRST THING)                            */}
         {/* ==================================================================== */}
-        {/* ==================================================================== */}
-        {/* SCREEN 1: UPLOAD RESUME (VERY FIRST THING)                            */}
-        {/* ==================================================================== */}
-        {currentStage === "resume" && (
+        {loading && (
+          <div className="neo-card p-10 text-center text-muted" role="status">
+            <div className="inline-block h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" />
+          </div>
+        )}
+
+        {!loading && currentStage === "resume" && (
           <div className="max-w-2xl mx-auto animate-chat-in">
             <div className="neo-card p-8 sm:p-10 space-y-6 text-center">
               <div className="space-y-2">
@@ -779,6 +754,12 @@ export default function CounselPage() {
                   </div>
                 )}
 
+                {!uploadedResume && resumeDone && !uploadingResume && (
+                  <p className="text-xs text-emerald-800 font-semibold">
+                    ✓ Resume already on file. Upload a new PDF to replace it.
+                  </p>
+                )}
+
                 {uploadedResume && !uploadingResume && (
                   <div className="space-y-4 text-left">
                     <div className="p-4 rounded-xl bg-emerald-50/90 border border-emerald-300 flex items-center justify-between gap-3 shadow-xs">
@@ -804,38 +785,58 @@ export default function CounselPage() {
                     </div>
 
                     {uploadedResume.extractedSkills.length > 0 && (
-                      <div className="space-y-2 pt-2">
-                        <span className="text-[11px] font-bold uppercase text-muted tracking-wider block">
-                          Verified Technical Competencies ({uploadedResume.extractedSkills.length}):
-                        </span>
-                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                          {uploadedResume.extractedSkills.slice(0, 20).map((skill, idx) => {
-                            const palette = [
-                              "bg-sky-50 text-sky-900 border-sky-300",
-                              "bg-emerald-50 text-emerald-900 border-emerald-300",
-                              "bg-amber-50 text-amber-900 border-amber-300",
-                              "bg-teal-50 text-teal-900 border-teal-300",
-                              "bg-orange-50 text-orange-900 border-orange-300",
-                            ];
+                      <div className="space-y-2.5 pt-2">
+                        <div>
+                          <p className="text-sm font-bold text-ink">Which of these have you really used?</p>
+                          <p className="text-[11px] text-muted">
+                            Tap to confirm. Only confirmed skills count fully when we score jobs — unconfirmed ones count half.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
+                          {uploadedResume.extractedSkills.map((skill) => {
+                            const on = confirmedSkills.includes(skill);
                             return (
-                              <span
+                              <button
                                 key={skill}
-                                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-xs ${
-                                  palette[idx % palette.length]
+                                type="button"
+                                aria-pressed={on}
+                                disabled={skillsSaved}
+                                onClick={() =>
+                                  setConfirmedSkills((prev) => (on ? prev.filter((x) => x !== skill) : [...prev, skill]))
+                                }
+                                className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
+                                  on
+                                    ? "bg-teal-600 text-white border-teal-600"
+                                    : "bg-white/80 text-ink border-slate-200 hover:border-teal-400"
                                 }`}
                               >
+                                {on ? "✓ " : ""}
                                 {skill}
-                              </span>
+                              </button>
                             );
                           })}
                         </div>
+                        {skillsSaved ? (
+                          <p className="text-xs font-semibold text-teal-800">
+                            ✓ {confirmedSkills.length} skill{confirmedSkills.length === 1 ? "" : "s"} confirmed.
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={confirmedSkills.length === 0 || savingSkills}
+                            onClick={handleConfirmResumeSkills}
+                            className="btn-teal px-4 py-2 text-xs disabled:opacity-40"
+                          >
+                            {savingSkills ? "Saving..." : `Confirm ${confirmedSkills.length || ""} skill${confirmedSkills.length === 1 ? "" : "s"}`}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
               </div>
 
-              {uploadedResume && (
+              {hasResume && (
                 <div className="pt-2 flex justify-end">
                   <button
                     type="button"
@@ -853,7 +854,7 @@ export default function CounselPage() {
         {/* ==================================================================== */}
         {/* SCREEN 2: ADD LINKEDIN PROFILE (SKIPPABLE)                           */}
         {/* ==================================================================== */}
-        {currentStage === "linkedin" && (
+        {!loading && currentStage === "linkedin" && (
           <div className="max-w-2xl mx-auto animate-chat-in">
             <div className="neo-card p-8 sm:p-10 space-y-6 text-center">
               <div className="space-y-2">
@@ -870,15 +871,25 @@ export default function CounselPage() {
               </div>
 
               <div className="space-y-4 max-w-lg mx-auto text-left">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={linkedinInput}
-                    onChange={(e) => setLinkedinInput(e.target.value)}
-                    placeholder="https://www.linkedin.com/in/your-profile"
-                    className="neo-inset w-full px-4 py-3.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
-                  />
-                </div>
+                <input
+                  type="url"
+                  value={linkedinInput}
+                  onChange={(e) => setLinkedinInput(e.target.value)}
+                  placeholder="https://www.linkedin.com/in/your-profile"
+                  aria-label="LinkedIn profile URL"
+                  className="neo-inset w-full px-4 py-3.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
+                />
+                <input
+                  type="text"
+                  value={linkedinHeadline}
+                  onChange={(e) => setLinkedinHeadline(e.target.value)}
+                  placeholder="Your LinkedIn headline, e.g. Senior Backend Engineer | Distributed Systems"
+                  aria-label="LinkedIn headline"
+                  className="neo-inset w-full px-4 py-3.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
+                />
+                <p className="text-[11px] text-muted">
+                  The headline is what we check against your target roles for readiness.
+                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-slate-200/60 max-w-lg mx-auto">
@@ -894,7 +905,7 @@ export default function CounselPage() {
                 <button
                   type="button"
                   onClick={() => handleSaveLinkedin(false)}
-                  disabled={savingLinkedin || !linkedinInput.trim()}
+                  disabled={savingLinkedin || (!linkedinInput.trim() && !linkedinHeadline.trim())}
                   className="w-full sm:w-auto btn-sky px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md active:scale-[0.97]"
                 >
                   {savingLinkedin ? "Saving..." : "Save & Continue →"}
@@ -907,7 +918,7 @@ export default function CounselPage() {
         {/* ==================================================================== */}
         {/* SCREEN 3: TARGET MARKET ROLES (SEARCH BAR + DROPDOWN, MAX 3)         */}
         {/* ==================================================================== */}
-        {currentStage === "target_jobs" && (
+        {!loading && currentStage === "target_jobs" && (
           <div className="max-w-3xl mx-auto animate-chat-in">
             <div className="neo-card p-8 sm:p-10 space-y-6">
               <div className="text-center space-y-2">
@@ -1069,8 +1080,11 @@ export default function CounselPage() {
                     { title: "Engineering Manager", style: "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100" },
                     { title: "Platform / DevOps Engineer", style: "bg-orange-50 text-orange-900 border-orange-300 hover:bg-orange-100" },
                   ].map((preset) => {
+                    const presetLower = preset.title.toLowerCase();
                     const matched = catalogRoles.find(
-                      (r) => r.title.toLowerCase() === preset.title.toLowerCase()
+                      (r) =>
+                        r.title.toLowerCase() === presetLower ||
+                        r.aliases?.some((a) => a.toLowerCase() === presetLower)
                     );
                     const roleId = matched ? matched.id : preset.title;
                     const isSelected = selectedRoleIds.includes(roleId);
@@ -1110,12 +1124,9 @@ export default function CounselPage() {
         )}
 
         {/* ==================================================================== */}
-        {/* SCREEN 4: EXPERT CAREER DIAGNOSIS, PREFERENCES & OPTIONAL CHAT       */}
-        {/* ==================================================================== */}
-        {/* ==================================================================== */}
         {/* SCREEN 4: EXPERT CAREER COUNSELOR & LIVE PERSONA ADVICE              */}
         {/* ==================================================================== */}
-        {currentStage === "live_chat" && (
+        {!loading && currentStage === "live_chat" && (
           <div className="max-w-4xl mx-auto space-y-6 animate-chat-in">
             {/* Top Bar with Instant Skip */}
             <div className="neo-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-teal-500/30 bg-gradient-to-r from-teal-50/50 via-white to-sky-50/40">
@@ -1150,40 +1161,14 @@ export default function CounselPage() {
                 const match = catalogRoles.find((r) => r.id === rId);
                 const title =
                   match?.title || rId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                const matchScore = idx === 0 ? "96%" : idx === 1 ? "91%" : "86%";
                 const roleRank =
                   idx === 0 ? "Primary Target" : idx === 1 ? "Secondary" : "Growth Opportunity";
-                const salaryBand =
-                  idx === 0
-                    ? "$190k - $250k"
-                    : idx === 1
-                    ? "$175k - $225k"
-                    : "$180k - $235k";
 
                 const tierStyles = [
-                  {
-                    border: "border-emerald-500/70 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40",
-                    badge: "badge-emerald",
-                    rankBadge: "badge-emerald",
-                    salaryColor: "text-emerald-800",
-                    pulseDot: "bg-emerald-500",
-                  },
-                  {
-                    border: "border-sky-500/70 bg-gradient-to-br from-sky-50/70 via-white to-cyan-50/40",
-                    badge: "badge-sky",
-                    rankBadge: "badge-sky",
-                    salaryColor: "text-sky-800",
-                    pulseDot: "bg-sky-500",
-                  },
-                  {
-                    border: "border-amber-500/70 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40",
-                    badge: "badge-amber",
-                    rankBadge: "badge-amber",
-                    salaryColor: "text-amber-800",
-                    pulseDot: "bg-amber-500",
-                  },
+                  { border: "border-emerald-500/70 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40", badge: "badge-emerald" },
+                  { border: "border-sky-500/70 bg-gradient-to-br from-sky-50/70 via-white to-cyan-50/40", badge: "badge-sky" },
+                  { border: "border-amber-500/70 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40", badge: "badge-amber" },
                 ];
-
                 const tier = tierStyles[idx] || tierStyles[0];
 
                 return (
@@ -1191,24 +1176,23 @@ export default function CounselPage() {
                     key={rId}
                     className={`p-5 rounded-2xl space-y-2.5 border shadow-sm transition-all ${tier.border}`}
                   >
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className={`${tier.rankBadge} font-bold py-0.5 px-2`}>{roleRank}</span>
-                      <span className={`${tier.badge} py-0.5 px-2 font-black flex items-center gap-1`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${tier.pulseDot} animate-pulse`} />
-                        {matchScore} Fit
-                      </span>
+                    <div className="text-[10px]">
+                      <span className={`${tier.badge} font-bold py-0.5 px-2`}>{roleRank}</span>
                     </div>
 
                     <h4 className="text-sm font-black text-ink leading-snug">{title}</h4>
-
-                    <div className="text-[11px] text-muted flex items-center justify-between pt-1 border-t border-slate-200/50">
-                      <span>Target Band:</span>
-                      <span className={`${tier.salaryColor} font-bold`}>{salaryBand}</span>
-                    </div>
+                    {match?.baseline_skills && (
+                      <p className="text-[11px] text-muted pt-1 border-t border-slate-200/50">
+                        Core skills: {match.baseline_skills.join(", ")}
+                      </p>
+                    )}
                   </div>
                 );
               })}
             </div>
+
+            {/* The counsellor collects job-search facts one question at a time */}
+            <FactQuestion key={factsVersion} />
 
             {/* Live Interactive Counselor Chat */}
             <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-white/95">
@@ -1322,7 +1306,7 @@ export default function CounselPage() {
               {/* Bottom Confirm Action */}
               <div className="pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-xs text-muted">
-                  Ready to scout? You can launch automated job scouting now.
+                  Scout has already started searching for these roles. Confirm to see your matches.
                 </p>
 
                 <button

@@ -3,19 +3,22 @@
 import React, { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { api } from "@/lib/api";
+import { APPLY_LINE, JobFitCard, type JobItem } from "@/components/JobFitCard";
 
-interface JobMatchItem {
-  match_id: string;
-  job_id: string;
-  title: string;
-  company: string;
-  match_score: number;
-  why_matched: string;
-  status: string;
+interface SkillFix {
+  skill: string;
+  in_resume: boolean;
+  jobs_unlocked: number;
+  jobs_improved: number;
+  avg_gain: number;
 }
 
-interface JourneyState {
-  stage: string;
+type Tab = "ready" | "stretch" | "skip";
+
+function tabOf(job: JobItem): Tab {
+  if (!job.fit) return "stretch";
+  if (job.fit.score >= APPLY_LINE) return "ready";
+  return job.fit.verdict === "stretch" ? "stretch" : "skip";
 }
 
 interface CoverLetter {
@@ -47,8 +50,12 @@ interface PreparedPacket {
 }
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<JobMatchItem[]>([]);
-  const [stage, setStage] = useState<string>("counsel");
+  const [jobs, setJobs] = useState<JobItem[]>([]);
+  const [emailConnected, setEmailConnected] = useState<boolean | null>(null);
+  const [fixes, setFixes] = useState<SkillFix[]>([]);
+  const [busySkill, setBusySkill] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab | null>(null);
+  const [scoutPolls, setScoutPolls] = useState(0);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [preparingJobId, setPreparingJobId] = useState<string | null>(null);
@@ -60,18 +67,33 @@ export default function JobsPage() {
 
   useEffect(() => {
     loadData();
+    api<{ connected: unknown }>("/api/emails/status")
+      .then((s) => setEmailConnected(Boolean(s.connected)))
+      .catch(() => setEmailConnected(null));
   }, []);
+
+  // Scout starts in the background when roles are saved: poll briefly until first matches land.
+  const scoutSearching = !loading && jobs.length === 0 && scoutPolls < 12;
+  useEffect(() => {
+    if (!scoutSearching) return;
+    const t = setTimeout(async () => {
+      const latest = await api<JobItem[]>("/api/jobs").catch(() => []);
+      setJobs(latest);
+      setScoutPolls((n) => n + 1);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [scoutSearching, scoutPolls]);
 
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
-      const [jobsData, journeyData] = await Promise.all([
-        api<JobMatchItem[]>("/api/jobs"),
-        api<JourneyState>("/api/journey").catch(() => ({ stage: "hunt" })),
+      const [jobList, fixList] = await Promise.all([
+        api<JobItem[]>("/api/jobs"),
+        api<SkillFix[]>("/api/fit/fixes").catch(() => []),
       ]);
-      setJobs(jobsData);
-      setStage(journeyData.stage);
+      setJobs(jobList);
+      setFixes(fixList);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -83,24 +105,19 @@ export default function JobsPage() {
     }
   }
 
-  const isScanDisabled = ["counsel", "todos", "mailbox"].includes(stage);
-
   async function handleScanNow() {
-    if (isScanDisabled) return;
     setScanning(true);
     setError(null);
     setScanMessage(null);
     try {
-      const res = await fetch("/api/scout/scan-now", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.detail || "Scout scan failed");
-      }
-      setScanMessage(data.message || `Scout scan completed. Found ${data.scraped_count ?? 0} jobs.`);
+      const data = await api<{ new_matches: number; boards_scanned: number; scans_remaining: number }>(
+        "/api/scout/scan-now",
+        { method: "POST" }
+      );
+      setScanMessage(
+        `Scanned ${data.boards_scanned} company job boards: ${data.new_matches} new match${data.new_matches === 1 ? "" : "es"}. ` +
+          `${data.scans_remaining} manual scan${data.scans_remaining === 1 ? "" : "s"} left today.`
+      );
       await loadData();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -110,6 +127,28 @@ export default function JobsPage() {
       }
     } finally {
       setScanning(false);
+    }
+  }
+
+  async function handleSkill(skill: string, action: "confirm" | "decline") {
+    setBusySkill(skill);
+    setError(null);
+    setScanMessage(null);
+    try {
+      const res = await api<{ unlocked?: number; apply_ready: number }>(`/api/fit/fixes/${action}-skill`, {
+        method: "POST",
+        body: JSON.stringify({ skill }),
+      });
+      setScanMessage(
+        action === "confirm"
+          ? `Confirmed ${skill}. ${res.unlocked ? `${res.unlocked} more job${res.unlocked === 1 ? "" : "s"} ready to apply — ` : ""}${res.apply_ready} ready in total.`
+          : `Noted: ${skill} stays a gap. We won't suggest it again.`
+      );
+      await loadData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not update that skill");
+    } finally {
+      setBusySkill(null);
     }
   }
 
@@ -147,7 +186,6 @@ export default function JobsPage() {
           body: JSON.stringify({
             job_id: activePacket.job_id,
             resume_version_id: activePacket.resume_version_id,
-            has_connected_email: true,
           }),
         }
       );
@@ -165,8 +203,13 @@ export default function JobsPage() {
     }
   }
 
+  const counts = { ready: 0, stretch: 0, skip: 0 };
+  jobs.forEach((j) => counts[tabOf(j)]++);
+  const activeTab: Tab = tab ?? (counts.ready > 0 ? "ready" : counts.stretch > 0 ? "stretch" : "skip");
+  const visibleJobs = jobs.filter((j) => tabOf(j) === activeTab);
+
   return (
-    <Shell title="Scouted Jobs Board">
+    <Shell title="Your Job Matches">
       <div className="w-full space-y-6">
         {/* Scout Trigger Header */}
         <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/80 bg-white/70 backdrop-blur-md shadow-md">
@@ -181,30 +224,35 @@ export default function JobsPage() {
             </div>
             <h2 className="text-lg font-bold text-ink tracking-tight">Autonomous Match Pipeline</h2>
             <p className="text-xs text-muted mt-0.5">
-              Scouts verified public postings with DeepSeek matching algorithms grounded in your target roles.
+              Scout started when you picked your roles and keeps checking public company job boards for postings that match them.
             </p>
           </div>
           <div>
             <button
               onClick={handleScanNow}
-              disabled={isScanDisabled || scanning}
-              className={`px-6 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md ${
-                isScanDisabled
-                  ? "neo-inset opacity-50 cursor-not-allowed text-muted"
-                  : "btn-amber hover:shadow-lg hover:shadow-amber-500/25 active:scale-[0.97]"
-              }`}
+              disabled={scanning}
+              className="px-6 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md btn-amber hover:shadow-lg hover:shadow-amber-500/25 active:scale-[0.97] disabled:opacity-60"
             >
-              {scanning ? "Scanning Portals..." : "Trigger Scout Now ⚡"}
+              {scanning ? "Scanning job boards..." : "Scan Again Now ⚡"}
             </button>
           </div>
         </div>
 
-        {isScanDisabled && (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-900 flex items-center gap-2">
-            <span>⚠️</span>
+        {scoutSearching && (
+          <div className="p-4 rounded-xl bg-sky-50 border border-sky-300 text-xs text-sky-900 flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full border-2 border-sky-600 border-t-transparent animate-spin" />
+            <span>Scout is searching company job boards for your target roles. Matches appear here automatically.</span>
+          </div>
+        )}
+
+        {emailConnected === false && (
+          <div className="p-4 rounded-xl bg-white/80 border border-slate-200 text-xs text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span>
-              Scouting is paused during the <strong>{stage}</strong> stage. Clear your profile checklist and connect a mailbox to unlock autonomous hunt.
+              <strong>Optional:</strong> connect your email and we can also reach out to recruiters for you. Every email waits for your approval.
             </span>
+            <a href="/mailbox" className="font-bold text-teal-800 underline whitespace-nowrap">
+              Connect email →
+            </a>
           </div>
         )}
 
@@ -316,68 +364,96 @@ export default function JobsPage() {
           <div className="neo-card p-10 text-center space-y-3">
             <h3 className="text-lg font-bold text-ink">No Matched Jobs Yet</h3>
             <p className="text-xs text-muted max-w-md mx-auto">
-              Click &quot;Trigger Scout Now&quot; above to search live Greenhouse, Lever, and Ashby pipelines for roles matching your profile.
+              {scoutSearching
+                ? "Scout is still searching — this usually takes under a minute."
+                : "No postings matched your roles on the boards we scan yet. Try \u201cScan Again Now\u201d, or broaden your target roles in Counsel."}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {jobs.map((item) => (
-              <div key={item.match_id} className="neo-card-interactive p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-base font-bold text-ink tracking-tight">{item.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="badge-teal text-[11px] font-bold">{item.company}</span>
-                      <span className="text-[11px] text-muted uppercase font-semibold">
-                        Status: {item.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-black px-3.5 py-1 rounded-full border shadow-xs flex items-center gap-1.5 ${
-                        item.match_score >= 8.5
-                          ? "badge-emerald border-emerald-400/80"
-                          : item.match_score >= 7.0
-                          ? "badge-sky border-sky-400/80"
-                          : "badge-amber border-amber-400/80"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${
-                        item.match_score >= 8.5 ? "bg-emerald-500 animate-pulse" : item.match_score >= 7.0 ? "bg-sky-500" : "bg-amber-500"
-                      }`} />
-                      Fit: {item.match_score.toFixed(1)} / 10
-                    </span>
-                  </div>
-                </div>
-
-                <div className="neo-inset p-3.5 text-xs text-muted rounded-xl border border-slate-200/40">
-                  <span className="font-bold text-ink block mb-0.5">Matching Rationale:</span>
-                  <p className="leading-relaxed">
-                    {item.why_matched || "Matched based on core baseline skill alignment and role focus."}
+            {fixes.some((f) => f.jobs_unlocked > 0 || f.jobs_improved > 1) && (
+              <section className="neo-card p-5 sm:p-6 space-y-3 border-rope-500/20">
+                <div>
+                  <h2 className="text-lg font-bold text-ink">Biggest wins for your profile</h2>
+                  <p className="text-xs text-muted">
+                    Confirm skills you&apos;ve really used — every job is rescored instantly. Skipped fixes keep scores honest.
                   </p>
                 </div>
-
-                {/* Apply Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-1">
-                  <button
-                    type="button"
-                    disabled={preparingJobId === item.job_id}
-                    onClick={() => handleChoose(item.job_id, "original")}
-                    className="neo-raised px-4 py-2 text-xs font-semibold text-ink hover:text-teal-700 hover:border-teal-400 rounded-xl transition-all disabled:opacity-50"
-                  >
-                    {preparingJobId === item.job_id ? "Preparing..." : "Use Original Master"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={preparingJobId === item.job_id}
-                    onClick={() => handleChoose(item.job_id, "refine")}
-                    className="btn-teal px-5 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 active:scale-[0.97]"
-                  >
-                    {preparingJobId === item.job_id ? "Tailoring..." : "Refine for this job ✦"}
-                  </button>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {fixes.slice(0, 3).map((f) => (
+                    <div key={f.skill} className="neo-raised p-4 space-y-2">
+                      <p className="font-display text-base font-bold text-ink">{f.skill}</p>
+                      <p className="text-xs text-muted">
+                        {f.jobs_unlocked > 0 ? (
+                          <span className="font-bold text-teal-700">Unlocks {f.jobs_unlocked} job{f.jobs_unlocked === 1 ? "" : "s"}</span>
+                        ) : (
+                          <span className="font-semibold text-ink">+{f.avg_gain.toFixed(1)} avg</span>
+                        )}{" "}
+                        · improves {f.jobs_improved}
+                        {f.in_resume && " · in your resume"}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busySkill !== null}
+                          onClick={() => handleSkill(f.skill, "confirm")}
+                          className="btn-teal flex-1 px-3 py-1.5 text-[11px] disabled:opacity-50"
+                        >
+                          {busySkill === f.skill ? "Saving..." : "I have it"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busySkill !== null}
+                          onClick={() => handleSkill(f.skill, "decline")}
+                          className="neo-raised !rounded-xl px-3 py-1.5 text-[11px] font-bold text-muted hover:text-ink disabled:opacity-50"
+                        >
+                          Not yet
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </section>
+            )}
+
+            <div role="tablist" aria-label="Filter jobs by fit" className="neo-inset inline-flex gap-1 p-1.5">
+              {(["ready", "stretch", "skip"] as Tab[]).map((t) => {
+                const count = jobs.filter((j) => tabOf(j) === t).length;
+                const active = activeTab === t;
+                return (
+                  <button
+                    key={t}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t)}
+                    className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-colors ${
+                      active ? "neo-raised !rounded-xl text-ink" : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    {t === "ready" ? "Ready to apply" : t === "stretch" ? "Stretch" : "Not a fit yet"}{" "}
+                    <span className="tabular-nums opacity-70">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {visibleJobs.length === 0 && (
+              <p className="neo-card p-6 text-center text-xs text-muted">
+                {activeTab === "ready"
+                  ? "Nothing clears the 4.0 apply line yet — confirm skills above or check the Stretch tab."
+                  : "No jobs here."}
+              </p>
+            )}
+            {visibleJobs.map((item) => (
+              <JobFitCard
+                key={item.match_id}
+                item={item}
+                preparing={preparingJobId === item.job_id}
+                busySkill={busySkill}
+                onChoose={handleChoose}
+                onConfirm={(skill) => handleSkill(skill, "confirm")}
+                onDecline={(skill) => handleSkill(skill, "decline")}
+              />
             ))}
           </div>
         )}

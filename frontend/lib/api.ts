@@ -13,6 +13,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       data = { detail: text };
     }
   }
+  if (response.status === 401 && !["/login", "/register"].includes(window.location.pathname)) {
+    window.location.assign("/login");
+  }
   if (!response.ok) {
     const errorMsg =
       (data && typeof data.detail === "string" && data.detail) ||
@@ -20,4 +23,23 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(errorMsg);
   }
   return data as T;
+}
+
+// To-dos and email are optional side steps; once counsel is done the candidate lives on Jobs.
+const STAGE_PAGE: Record<string, string> = {
+  counsel: "/counsel",
+  todos: "/jobs",
+  mailbox: "/jobs",
+  hunt: "/jobs",
+  active: "/applications",
+};
+
+export function pageForStage(stage: string): string {
+  return STAGE_PAGE[stage] ?? "/counsel";
+}
+
+/** Sends the candidate to the page for their current journey stage. */
+export async function goToCurrentStage(): Promise<void> {
+  const { stage } = await api<{ stage: string }>("/api/journey");
+  window.location.assign(pageForStage(stage));
 }
