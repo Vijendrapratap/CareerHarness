@@ -4,7 +4,7 @@ import pytest
 
 from app.domain.gap_engine import gap_engine
 from app.domain.linkedin import linkedin_service
-from app.domain.readiness import ReadinessGateBlockedError, readiness_gate
+from app.domain.readiness import readiness_gate
 from app.domain.resume_parser import resume_parser
 from app.domain.roles import roles_service
 
@@ -92,17 +92,12 @@ async def test_ge03_critical_dismiss_caps_score_at_69(
 
 
 @pytest.mark.asyncio
-async def test_rd01_scout_unschedulable_below_threshold(
+async def test_open_criticals_mean_profile_not_ready(
     db_session, sample_tenant, setup_candidate_profile
 ):
-    """RD-01: Job Scout is unschedulable while score < 70 or open criticals > 0."""
+    """Readiness is advisory: open criticals report not-ready (scouting itself is never blocked)."""
     await gap_engine.compute_gaps(db_session, sample_tenant.id)
-
-    # Candidate has open criticals -> scheduling Scout must raise ReadinessGateBlockedError
-    with pytest.raises(ReadinessGateBlockedError) as exc_info:
-        await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
-
-    assert "Readiness Gate Locked" in str(exc_info.value)
+    assert not (await readiness_gate.evaluate_readiness(db_session, sample_tenant.id)).is_ready
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,6 @@
 """Gap Engine, Front-Face Scoring (0–100), and To-Do Fix Generator (F5, GE-01..05)."""
 
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -15,6 +16,7 @@ from app.domain.models import (
     ResumeParse,
     TodoItem,
 )
+from app.domain.resume_parser import verify_skill
 from app.domain.roles import roles_service
 
 
@@ -96,13 +98,12 @@ class GapEngine:
         resolved_todos = (await session.execute(existing_todos_q)).scalars().all()
         resolved_issue_keys = {t.issue_text for t in resolved_todos}
 
-        # Clean up prior unaccepted open todos to prevent accumulation
-        await session.execute(
-            delete(TodoItem).where(
-                TodoItem.tenant_id == tenant_id,
-                TodoItem.status == "open",
-            )
+        # Keep still-relevant open todos (stable ids for the UI); stale ones are deleted below
+        open_todos_q = select(TodoItem).where(
+            TodoItem.tenant_id == tenant_id,
+            TodoItem.status == "open",
         )
+        existing_open = {t.issue_text: t for t in (await session.execute(open_todos_q)).scalars().all()}
 
         todo_items: List[TodoItem] = []
         presentation_gaps: List[Dict[str, Any]] = []
@@ -111,7 +112,7 @@ class GapEngine:
 
         def add_todo_if_new(todo: TodoItem):
             if todo.issue_text not in resolved_issue_keys:
-                todo_items.append(todo)
+                todo_items.append(existing_open.get(todo.issue_text, todo))
 
         # Check: Missing metrics in resume bullets (Presentation gap)
         for bullet in bullets:
@@ -191,7 +192,11 @@ class GapEngine:
             linkedin_gaps=linkedin_gaps,
         )
         session.add(gap_report)
-        session.add_all(todo_items)
+        existing_ids = {t.id for t in existing_open.values()}
+        stale_ids = existing_ids - {t.id for t in todo_items}
+        if stale_ids:
+            await session.execute(delete(TodoItem).where(TodoItem.id.in_(stale_ids)))
+        session.add_all([t for t in todo_items if t.id not in existing_ids])
         await session.flush()
 
         # 5. Compute Front-Face Score (0–100)
@@ -308,6 +313,11 @@ class GapEngine:
             todo.resolved_at = now
         else:
             raise GapEngineError(f"Invalid action '{action}'. Must be accept, edit, or dismiss.")
+
+        # Accepting a skill-alignment item is the candidate confirming the skill (AT-06).
+        skill_match = re.search(r"expects skill '(.+)'\.$", todo.issue_text)
+        if todo.category == "skill_alignment" and todo.status == "accepted" and skill_match:
+            await verify_skill(session, tenant_id, skill_match.group(1))
 
         await session.flush()
 

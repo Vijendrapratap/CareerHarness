@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
+from app.domain.fit_service import evaluate_tenant
 from app.domain.gap_engine import GapEngineError, gap_engine
 from app.domain.models import TodoItem
 from app.domain.readiness import readiness_gate
@@ -118,6 +119,7 @@ async def resolve_todo_action(
             edited_text=req.edited_text,
             dismiss_reason=req.dismiss_reason,
         )
+        await evaluate_tenant(session, tenant_id)  # an accepted skill tip verifies that skill
         await session.commit()
         return TodoItemResponse(
             id=todo.id,

@@ -35,14 +35,11 @@ async def set_stage(session: AsyncSession, tenant_id: str, stage: Stage) -> Cand
 
 
 async def refresh_stage_from_readiness(session: AsyncSession, tenant_id: str) -> str:
+    """To-dos and mailbox are optional now: candidates parked there move on to the hunt."""
     journey = await get_or_create_journey(session, tenant_id)
-    if journey.stage != "todos":
-        return journey.stage
-    from app.domain.readiness import readiness_gate
-    status = await readiness_gate.evaluate_readiness(session, tenant_id)
-    if status.is_ready:
-        await set_stage(session, tenant_id, "mailbox")
-    return (await get_or_create_journey(session, tenant_id)).stage
+    if journey.stage in ("todos", "mailbox"):
+        await set_stage(session, tenant_id, "hunt")
+    return journey.stage
 
 
 async def note_application_submitted(session: AsyncSession, tenant_id: str) -> str:

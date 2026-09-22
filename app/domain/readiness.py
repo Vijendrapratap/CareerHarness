@@ -1,4 +1,4 @@
-"""Readiness Gate Evaluator & Scout Scheduler Guard (F7, RD-01)."""
+"""Front-Face readiness evaluation (advisory: shown to the candidate, never blocks scouting)."""
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -8,10 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models import ReadinessScore, TodoItem
 
-
-class ReadinessGateBlockedError(Exception):
-    """Raised when an automated scout or application action is attempted before clearing the gate (RD-01)."""
-    pass
 
 
 @dataclass
@@ -77,19 +73,6 @@ class ReadinessGateService:
             unblocking_todos=unblocking,
         )
 
-    @staticmethod
-    async def verify_can_schedule_scout(
-        session: AsyncSession,
-        tenant_id: str,
-    ) -> bool:
-        """Enforces RD-01: Scout is unschedulable below threshold."""
-        status = await ReadinessGateService.evaluate_readiness(session, tenant_id)
-        if not status.is_ready:
-            raise ReadinessGateBlockedError(
-                f"Readiness Gate Locked: Current Front-Face Score is {status.overall_score}/100 with "
-                f"{status.open_criticals} open critical item(s). Minimum 70 score and 0 criticals required."
-            )
-        return True
 
 
 readiness_gate = ReadinessGateService()

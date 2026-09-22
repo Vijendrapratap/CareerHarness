@@ -100,8 +100,8 @@ DEFAULT_MODEL_MAP: Dict[str, Dict[TaskTier, str]] = {
         "frontier": "gemini-1.5-pro",
     },
     "openrouter": {
-        "cheap": "deepseek/deepseek-chat-v4.1",
-        "mid": "deepseek/deepseek-chat-v4.1",
+        "cheap": "deepseek/deepseek-v4.1-flash",
+        "mid": "deepseek/deepseek-v4.1-flash",
         "frontier": "deepseek/deepseek-r1",
     },
     "deepseek": {

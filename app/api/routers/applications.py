@@ -16,7 +16,8 @@ from app.domain.application_engine import (
     execute_application_submission,
     generate_cover_letter,
 )
-from app.domain.models import ApplicationAuditLog, ApplicationTrack, JobListing, ResumeParse
+from app.domain.fit_service import FitGateError, ensure_apply_line
+from app.domain.models import ApplicationAuditLog, ApplicationTrack, ConnectedEmail, JobListing, ResumeParse
 from app.domain.vault import (
     create_tailored_version,
     get_document_version,
@@ -60,7 +61,6 @@ class SubmitApplicationRequest(BaseModel):
     screening_answers: Dict[str, str] = Field(default_factory=dict)
     simulate_bot_block: bool = False
     company_email: Optional[str] = None
-    has_connected_email: bool = False
     batch_item_id: Optional[str] = None
 
 
@@ -191,6 +191,8 @@ async def choose_application_mode(
         )
         await session.commit()
         return result
+    except FitGateError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -277,6 +279,12 @@ async def screening_questions_endpoint(
     return answer_screening_questions(req.questions, facts)
 
 
+async def _has_active_mailbox(session: AsyncSession, tenant_id: str) -> bool:
+    return (await session.execute(
+        select(ConnectedEmail.id).where(ConnectedEmail.tenant_id == tenant_id, ConnectedEmail.is_active.is_(True))
+    )).first() is not None
+
+
 @router.post("/submit")
 async def submit_application_endpoint(
     req: SubmitApplicationRequest,
@@ -289,6 +297,10 @@ async def submit_application_endpoint(
     job = job_res.scalar_one_or_none()
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {req.job_id} not found")
+    try:
+        await ensure_apply_line(session, tenant_id, job)
+    except FitGateError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
 
     resume_doc = await get_document_version(session, tenant_id, req.resume_version_id)
     if not resume_doc:
@@ -305,7 +317,8 @@ async def submit_application_endpoint(
         resume_version=resume_doc,
         cover_letter_version=cover_letter_doc,
         screening_answers=req.screening_answers,
-        has_connected_email=req.has_connected_email,
+        # Email route only when the candidate actually connected a mailbox (it is optional).
+        has_connected_email=await _has_active_mailbox(session, tenant_id),
         company_email=req.company_email,
         simulate_bot_block=req.simulate_bot_block,
         batch_item_id=req.batch_item_id,

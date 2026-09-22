@@ -73,3 +73,13 @@ async def second_tenant(db_session: AsyncSession) -> Tenant:
     db_session.add(tenant)
     await db_session.flush()
     return tenant
+
+
+@pytest.fixture(autouse=True)
+def no_background_scout(monkeypatch):
+    """Role selection starts a real network scan in production; tests never do."""
+
+    async def _noop(tenant_id: str) -> None:
+        return None
+
+    monkeypatch.setattr("app.api.routers.roles.start_scout_in_background", _noop)

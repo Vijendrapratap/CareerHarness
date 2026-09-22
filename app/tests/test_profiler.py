@@ -4,7 +4,7 @@ import pytest
 
 from app.agents.profiler import profiler_agent
 from app.domain.models import ReadinessScore, ResumeParse, RoleSelection, Story, TodoItem
-from app.domain.readiness import ReadinessGateBlockedError, readiness_gate
+from app.domain.readiness import readiness_gate
 
 
 @pytest.mark.asyncio
@@ -99,10 +99,8 @@ async def test_readiness_gate_locks_scout_below_threshold(db_session, sample_ten
     db_session.add(score_rec)
     await db_session.flush()
 
-    # Attempting to schedule scout must raise ReadinessGateBlockedError
-    with pytest.raises(ReadinessGateBlockedError) as exc:
-        await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
-    assert "Readiness Gate Locked" in str(exc.value)
+    # Below threshold -> not ready (advisory; scouting is never blocked)
+    assert not (await readiness_gate.evaluate_readiness(db_session, sample_tenant.id)).is_ready
 
     # Now update score to 75, but add an open critical Todo
     score_rec.overall_score = 75
@@ -118,13 +116,11 @@ async def test_readiness_gate_locks_scout_below_threshold(db_session, sample_ten
     db_session.add(critical_todo)
     await db_session.flush()
 
-    # Still locked due to open critical
-    with pytest.raises(ReadinessGateBlockedError):
-        await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
+    # Still not ready due to open critical
+    assert not (await readiness_gate.evaluate_readiness(db_session, sample_tenant.id)).is_ready
 
     # Mark critical resolved -> Gate passes!
     critical_todo.status = "resolved"
     await db_session.flush()
 
-    can_schedule = await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
-    assert can_schedule is True
+    assert (await readiness_gate.evaluate_readiness(db_session, sample_tenant.id)).is_ready

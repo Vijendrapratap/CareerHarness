@@ -883,3 +883,28 @@ class InterviewEvent(Base):
         Index("ix_interview_events_app_starts", "application_id", "starts_at", unique=True),
     )
 
+
+
+class JobFit(Base):
+    """Latest fit evaluation of one job for one candidate (recomputed when their facts/skills change)."""
+    __tablename__ = "job_fits"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("job_listings.id", ondelete="CASCADE"), nullable=False
+    )
+    score: Mapped[float] = mapped_column(Float, nullable=False)  # 1.0 to 5.0
+    verdict: Mapped[str] = mapped_column(String(16), nullable=False)  # apply, stretch, skip
+    report: Mapped[dict] = mapped_column(PortableJSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    __table_args__ = (
+        Index("ix_job_fits_tenant_job", "tenant_id", "job_id", unique=True),
+    )

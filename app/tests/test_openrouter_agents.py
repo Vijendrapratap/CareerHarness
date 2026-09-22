@@ -34,7 +34,7 @@ def test_openrouter_roster_binds_deepseek_models_and_handoff_chain():
     assert AGENT_ROSTER["tailor"].hands_off_to == "reviewer"
     assert AGENT_ROSTER["reviewer"].tier == "frontier"
     assert AGENT_ROSTER["dispatcher"].tools == ("ats_apply",)
-    assert router.model_for("openrouter", AGENT_ROSTER["tailor"].tier) == "deepseek/deepseek-chat-v4.1"
+    assert router.model_for("openrouter", AGENT_ROSTER["tailor"].tier) == "deepseek/deepseek-v4.1-flash"
     assert router.model_for("openrouter", AGENT_ROSTER["reviewer"].tier) == "deepseek/deepseek-r1"
 
 
@@ -139,7 +139,7 @@ async def test_model_router_sends_tools_and_parses_openrouter_tool_calls():
         )
 
     assert captured["url"] == "https://openrouter.ai/api/v1/chat/completions"
-    assert captured["body"]["model"] == "deepseek/deepseek-chat-v4.1"
+    assert captured["body"]["model"] == "deepseek/deepseek-v4.1-flash"
     assert captured["body"]["tools"][0]["function"]["name"] == "blackboard_read"
     assert response.tool_calls == [
         ToolCall(id="call_1", name="blackboard_read", arguments={"view_spec": ["profile"]})

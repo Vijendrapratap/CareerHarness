@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
+from app.core.config import settings
 from app.domain.counsel import (
     CounselOrderError,
     CounselValidationError,
@@ -97,12 +98,9 @@ async def chat_with_counsellor(
     db: AsyncSession = Depends(get_db),
 ):
     """Live interactive chat with the AI Career Counsellor to build a strong candidate persona."""
-    import os
     import httpx
-    from sqlalchemy import select
     from app.core.keyvault import KeyVaultService
     from app.domain.journey import get_or_create_journey
-    from app.domain.models import ProfileSection
 
     message = request.message.strip()
     history = request.history
@@ -113,7 +111,7 @@ async def chat_with_counsellor(
     lower_msg = message.lower()
 
     # Leadership / Management detection
-    if any(term in lower_msg for term in ["manage", "lead team", "lead squads", "engineering manager", "head of", "director"]):
+    if any(term in lower_msg for term in ["manage", "lead a team", "lead team", "lead squads", "people lead", "engineering manager", "head of", "director"]):
         detected["management"] = True
     elif any(term in lower_msg for term in ["individual contributor", "ic role", "hands-on", "pure engineering", "senior engineer", "staff engineer"]):
         detected["management"] = False
@@ -142,64 +140,48 @@ async def chat_with_counsellor(
     if any(term in lower_msg for term in ["avoid", "dealbreaker", "hate", "don't want", "toxic", "on-call", "monolith"]):
         detected["preferences"] = message
 
-    # Persist detected dimensions into ProfileSection upsert
-    for sec_step, sec_val in detected.items():
-        existing_sec = (
-            await db.execute(
-                select(ProfileSection).where(
-                    ProfileSection.tenant_id == tenant_id,
-                    ProfileSection.step == sec_step,
-                )
-            )
-        ).scalar_one_or_none()
-        body_val = sec_val if isinstance(sec_val, dict) else {"raw": sec_val, "value": sec_val}
-        if existing_sec:
-            existing_sec.body = body_val
-        else:
-            new_sec = ProfileSection(
-                tenant_id=tenant_id,
-                section=sec_step,
-                step=sec_step,
-                body=body_val,
-                input_mode="text",
-            )
-            db.add(new_sec)
-    await db.flush()
-
     # Try calling OpenRouter with DeepSeek Flash / Chat
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    api_key = settings.OPENROUTER_API_KEY
     if not api_key:
         try:
             api_key = await KeyVaultService.get_decrypted_key(db, tenant_id, "openrouter")
         except Exception:
             api_key = None
 
+    # What the counsellor knows, from the database rather than the browser.
+    from app.domain.candidate_facts import get_facts, next_question
+    from app.domain.fit_service import apply_ready_count, candidate_snapshot, fix_impact
+
+    snap = await candidate_snapshot(db, tenant_id)
+    missing = next_question(await get_facts(db, tenant_id))
+    top_fixes = (await fix_impact(db, tenant_id))[:3]
+    ready = await apply_ready_count(db, tenant_id)
+    known_facts = {k: v for k, v in snap.facts.items() if k not in ("skipped", "declined_skills")}
+    fix_lines = "\n".join(
+        f"- {f['skill']}: confirming it would unlock {f['jobs_unlocked']} job(s), improve {f['jobs_improved']}"
+        + (" (already in their resume, just unconfirmed)" if f["in_resume"] else " (not in their resume)")
+        for f in top_fixes
+    ) or "- none right now"
+
     reply = ""
     if api_key and not api_key.startswith("sk-test-"):
         try:
-            target_roles = context.get("target_roles", [])
-            resume_skills = context.get("skills", [])
-            linkedin = context.get("linkedin", "None")
-
             system_prompt = (
-                "You are the CareerHarness AI Executive Career Counsellor.\n"
-                "Your objective is to have a focused, encouraging, high-impact conversation with the candidate "
-                "to build a strong, precise candidate persona for our autonomous Scout job search agent.\n\n"
-                f"Candidate Context so far:\n"
-                f"- Target Roles: {', '.join(target_roles) if target_roles else 'Software Engineer'}\n"
-                f"- Extracted Resume Skills: {', '.join(resume_skills[:12]) if resume_skills else 'Extracted from resume'}\n"
-                f"- LinkedIn Profile: {linkedin}\n\n"
-                "Key dimensions to confirm and calibrate across the chat:\n"
-                "1. Technical superpowers & favorite problem spaces\n"
-                "2. Leadership scope (Senior IC vs Team Lead / Manager)\n"
-                "3. Work location & setup (Remote, Hybrid, Cities)\n"
-                "4. Work authorization & visa sponsorship status\n"
-                "5. Culture & technical dealbreakers (e.g. legacy monoliths, 24/7 on-call, company stages)\n\n"
-                "Style rules:\n"
-                "- Speak like a seasoned Silicon Valley executive career strategist and job scout.\n"
-                "- Directly answer the candidate's questions and give expert guidance on how to position their resume and target roles for the current market.\n"
-                "- Do NOT interrogate the candidate with endless questions or forced steps.\n"
-                "- Provide high-value strategic insight in 1-2 concise paragraphs and confirm their profile is well-calibrated for Scout."
+                "You are the CareerHarness career counsellor. You help the candidate find better jobs faster by "
+                "getting their profile honest and complete, then pointing them at the highest-leverage fixes.\n\n"
+                f"Target roles: {', '.join(snap.role_titles) or 'not chosen yet'}\n"
+                f"Confirmed skills: {', '.join(sorted(snap.verified_skills)) or 'none yet'}\n"
+                f"In resume but unconfirmed: {', '.join(sorted(snap.resume_skills)) or 'none'}\n"
+                f"Known facts: {known_facts or 'none yet'}\n"
+                f"Jobs currently at or above the 4.0/5 apply line: {ready}\n"
+                f"Biggest fixes (skills to confirm):\n{fix_lines}\n"
+                f"Next missing fact to collect: {missing['prompt'] if missing else 'none, all facts collected'}\n\n"
+                "Rules:\n"
+                "- Answer the candidate's question first, concretely, in 1-2 short paragraphs of plain text (no markdown).\n"
+                "- Then either ask the ONE next missing fact above, or suggest the single biggest fix and why it matters.\n"
+                "- Never tell them to claim a skill they haven't used. A skill they lack stays an honest gap; "
+                "suggest how to close it (a small project, a course) instead.\n"
+                "- Jobs below the apply line can't be applied to; say so plainly when relevant."
             )
 
             messages_payload = [{"role": "system", "content": system_prompt}]
@@ -212,8 +194,10 @@ async def chat_with_counsellor(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                     json={
-                        "model": "deepseek/deepseek-chat-v4.1",
+                        "model": "deepseek/deepseek-v4.1-flash",
                         "messages": messages_payload,
+                        "max_tokens": 350,  # 1-2 short paragraphs
+                        "reasoning": {"enabled": False},  # thinking took 20-30s and ate the token budget
                     },
                 )
                 if res.status_code == 200:
@@ -222,29 +206,22 @@ async def chat_with_counsellor(
         except Exception:
             reply = ""
 
-    # Intelligent Fallback if LLM request times out or no key is present
+    # Without a model: still useful — ask the next missing fact, or point at the biggest fix.
     if not reply:
-        if "management" in detected:
-            if detected["management"]:
-                reply = (
-                    "Leadership experience confirmed! I've flagged your profile for Engineering Manager and Squad Lead tracks, "
-                    "unlocking broader search scopes and executive recruiter outreach. Your candidate persona is looking sharp."
-                )
-            else:
-                reply = (
-                    "Individual Contributor (IC) track confirmed! We will focus 100% on Senior, Staff, and Principal engineering "
-                    "roles prioritizing technical ownership, systems architecture, and high leverage execution."
-                )
-        elif "location" in detected or "authorization" in detected or "preferences" in detected:
+        if missing:
+            reply = f"Noted. To score jobs for you properly I need one more thing: {missing['prompt']}"
+        elif top_fixes:
+            f = top_fixes[0]
+            gain = (
+                f"it would lift {f['jobs_unlocked']} job(s) over the apply line"
+                if f["jobs_unlocked"] else f"it would improve {f['jobs_improved']} of your matches"
+            )
             reply = (
-                "Preferences recorded and saved to your profile! Scout will filter out misaligned vacancies and prioritize "
-                "roles matching your exact criteria. You can adjust preferences anytime below or proceed directly to your matched jobs."
+                f"Your biggest win right now is {f['skill']}: {gain}. If you've really used it, confirm it on the Jobs page. "
+                "If not, it stays an honest gap, and I can suggest a small project to close it."
             )
         else:
-            reply = (
-                "I've analyzed your target roles and resume skills. Based on current market signals, you have strong positioning "
-                "for senior engineering opportunities. You can fine-tune your search preferences below or click 'Complete & Scout My Jobs' to proceed."
-            )
+            reply = f"Your profile is in good shape: {ready} job(s) are ready to apply. Ask me anything about them."
 
     journey = await get_or_create_journey(db, tenant_id)
     return CounselChatResponse(reply=reply, detected_attributes=detected, stage=journey.stage)
@@ -321,7 +298,9 @@ async def finalize_counsel(
     tenant_id: str = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Marks counselling complete and unlocks the todos stage."""
-    from app.domain.journey import set_stage
-    await set_stage(db, tenant_id, "todos")
-    return {"done": True, "stage": "todos"}
+    """Marks counselling complete and moves the candidate to the job hunt (no-op once past it)."""
+    from app.domain.journey import get_or_create_journey, set_stage
+    journey = await get_or_create_journey(db, tenant_id)
+    if journey.stage in ("counsel", "todos", "mailbox"):
+        journey = await set_stage(db, tenant_id, "hunt")
+    return {"done": True, "stage": journey.stage}

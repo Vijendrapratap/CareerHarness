@@ -13,6 +13,7 @@ from app.api.routers import (
     batches,
     counsel,
     emails,
+    fit,
     gaps,
     health,
     insights,
@@ -114,3 +115,4 @@ app.include_router(tracker.router)
 app.include_router(insights.router)
 app.include_router(journey.router)
 app.include_router(counsel.router)
+app.include_router(fit.router)

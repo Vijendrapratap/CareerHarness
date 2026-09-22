@@ -16,6 +16,7 @@ from app.domain.application_engine import (
     generate_cover_letter,
     review_tailored_honesty,
 )
+from app.domain.fit_service import ensure_apply_line
 from app.domain.models import JobListing
 from app.domain.vault import create_tailored_version, get_master_version
 
@@ -37,6 +38,9 @@ async def prepare_application(
     ).scalar_one_or_none()
     if not job:
         raise ValueError(f"JobListing with id '{job_id}' not found.")
+
+    # Only jobs at or above the apply line can be applied to (skipped fixes keep the score honest).
+    await ensure_apply_line(session, tenant_id, job)
 
     # 2. Fetch Master Resume
     master = await get_master_version(session, tenant_id, "resume")

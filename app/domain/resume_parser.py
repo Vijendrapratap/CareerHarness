@@ -9,19 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.outbox import outbox
 from app.domain.memory import memory
 from app.domain.models import ResumeParse
+from app.domain.skills import SKILLS, find_skills
 
 # Regex to detect impact metrics ($500k, 40%, 10M, 3x)
 METRIC_REGEX = re.compile(
     r"(\b\d+(?:\.\d+)?%\b|\$\d+(?:,\d+)*(?:\.\d+)?[kKmMbB]?|\b\d+[kKmMbB]\b|\b\d+x\b)"
 )
 
-# Common technical and domain skills dictionary for extraction
-KNOWN_SKILLS = [
-    "Python", "JavaScript", "TypeScript", "React", "Next.js", "Node.js", "SQL",
-    "PostgreSQL", "Redis", "Docker", "Kubernetes", "AWS", "GCP", "GraphQL",
-    "REST APIs", "Microservices", "Distributed Systems", "FastAPI", "Celery",
-    "Git", "CI/CD", "Tailwind CSS", "Linux", "TDD", "System Design",
-]
+# Canonical names from the shared vocabulary (kept for existing imports)
+KNOWN_SKILLS = list(SKILLS)
 
 
 class ResumeParserService:
@@ -46,17 +42,10 @@ class ResumeParserService:
         - Parsed skills are NEVER auto-marked verified.
         - Honesty tagging is strictly enforced.
         """
-        extracted = []
-        lowered_text = text.lower()
-        for skill in KNOWN_SKILLS:
-            pattern = rf"\b{re.escape(skill.lower())}\b"
-            if re.search(pattern, lowered_text):
-                extracted.append({
-                    "name": skill,
-                    "verified": False,  # AT-06: Strict unverified default
-                    "source": "resume_parse",
-                })
-        return extracted
+        return [
+            {"name": skill, "verified": False, "source": "resume_parse"}  # AT-06: never auto-verified
+            for skill in find_skills(text)
+        ]
 
     @staticmethod
     def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
@@ -180,6 +169,28 @@ class ResumeParserService:
         memory.write_section(tenant_id=tenant_id, section="verified_skills", data=verified_names)
 
         return record
+
+
+async def verify_skill(session: AsyncSession, tenant_id: str, skill: str) -> bool:
+    """Candidate confirms they have `skill`: mark it verified on their latest resume (AT-06).
+
+    Adds it when the resume text never mentioned it. Returns False when there is no resume yet.
+    """
+    record = (await session.execute(
+        select(ResumeParse).where(ResumeParse.tenant_id == tenant_id).order_by(ResumeParse.created_at.desc()).limit(1)
+    )).scalar_one_or_none()
+    if not record:
+        return False
+    skills = [dict(s) for s in record.extracted_skills]
+    for s in skills:
+        if s["name"].lower() == skill.lower():
+            s["verified"] = True
+            break
+    else:
+        skills.append({"name": skill, "verified": True, "source": "candidate_confirmed"})
+    record.extracted_skills = skills
+    await session.flush()
+    return True
 
 
 resume_parser = ResumeParserService()

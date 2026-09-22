@@ -40,7 +40,7 @@ from app.domain.models import (
     Run,
     TodoItem,
 )
-from app.domain.readiness import ReadinessGateBlockedError, readiness_gate
+from app.domain.readiness import readiness_gate
 from app.domain.roles import roles_service
 from app.domain.scout import scout_scheduler
 from app.domain.tracker import calculate_interview_reminders
@@ -442,9 +442,8 @@ async def test_rd01_and_ge03_dismissing_critical_permanently_caps_score(
     db_session.add(critical_item)
     await db_session.flush()
 
-    # 1. Gate is blocked due to open critical item (RD-01)
-    with pytest.raises(ReadinessGateBlockedError):
-        await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
+    # 1. Not ready due to open critical item
+    assert not (await readiness_gate.evaluate_readiness(db_session, sample_tenant.id)).is_ready
 
     # 2. Candidate attempts to dismiss the critical item instead of resolving it (GE-03)
     critical_item.status = "dismissed"
@@ -461,10 +460,6 @@ async def test_rd01_and_ge03_dismissing_critical_permanently_caps_score(
     assert status.overall_score == 69
     assert "dismissed" in status.cap_reason
 
-    # Scout scheduling is STILL strictly blocked
-    with pytest.raises(ReadinessGateBlockedError) as exc_blocked:
-        await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
-    assert "69/100" in str(exc_blocked.value)
 
     # 4. Candidate un-dismisses and resolves the item -> Cap is lifted and score reaches 85
     critical_item.status = "resolved"
@@ -476,8 +471,6 @@ async def test_rd01_and_ge03_dismissing_critical_permanently_caps_score(
     status_unlocked = await readiness_gate.evaluate_readiness(db_session, sample_tenant.id)
     assert status_unlocked.is_ready is True
     assert status_unlocked.overall_score == 85
-    can_schedule = await readiness_gate.verify_can_schedule_scout(db_session, sample_tenant.id)
-    assert can_schedule is True
 
 
 # ============================================================================

@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
 from app.domain.journey import (
+    _ORDER,
     JourneyRegressionError,
     Stage,
     get_or_create_journey,
@@ -42,6 +43,13 @@ async def update_journey_stage(
     tenant_id: str = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
+    current = (await get_or_create_journey(db, tenant_id)).stage
+    # Clients may only step forward by one stage.
+    if _ORDER.index(request.stage) > _ORDER.index(current) + 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot move from {current} to {request.stage}; finish the {current} step first.",
+        )
     try:
         journey = await set_stage(db, tenant_id, request.stage)
         return {"stage": journey.stage}

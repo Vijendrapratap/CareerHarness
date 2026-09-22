@@ -5,7 +5,7 @@ from app.domain.journey import get_or_create_journey
 
 
 @pytest.mark.asyncio
-async def test_counsel_walks_eight_steps_and_opens_todos(db_session, sample_tenant):
+async def test_counsel_walks_eight_steps_and_starts_the_hunt(db_session, sample_tenant):
     answers = [
         ("linkedin", "https://www.linkedin.com/in/ada"),
         ("resume", "resume-id-1"),
@@ -21,7 +21,7 @@ async def test_counsel_walks_eight_steps_and_opens_todos(db_session, sample_tena
         last = await record_answer(db_session, sample_tenant.id, step, text, "text")
     assert last["done"] is True
     journey = await get_or_create_journey(db_session, sample_tenant.id)
-    assert journey.stage == "todos"
+    assert journey.stage == "hunt"
 
 
 @pytest.mark.asyncio

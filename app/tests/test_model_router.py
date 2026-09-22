@@ -25,8 +25,8 @@ async def test_model_router_tier_resolution():
     assert router.model_for("gemini", "mid") == "gemini-1.5-pro"
 
     # OpenRouter DeepSeek Flash v4.1
-    assert router.model_for("openrouter", "cheap") == "deepseek/deepseek-chat-v4.1"
-    assert router.model_for("openrouter", "mid") == "deepseek/deepseek-chat-v4.1"
+    assert router.model_for("openrouter", "cheap") == "deepseek/deepseek-v4.1-flash"
+    assert router.model_for("openrouter", "mid") == "deepseek/deepseek-v4.1-flash"
     assert router.model_for("openrouter", "cheap", model_override="deepseek/deepseek-flash-v4.1") == "deepseek/deepseek-flash-v4.1"
     assert router.model_for("deepseek", "cheap") == "deepseek-chat"
 

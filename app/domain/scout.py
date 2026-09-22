@@ -1,15 +1,29 @@
-"""Scout Agent Scheduling & Rate-Limiting Service (F7, RD-02, RD-03)."""
+"""Scout Agent: scheduling, rate limits (RD-03) and job discovery for the candidate's selected roles."""
 
+import asyncio
+import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.outbox import outbox
-from app.domain.models import ScoutSchedule, Tenant
-from app.domain.readiness import readiness_gate
+from app.domain.models import JobMatch, RoleSelection, ScoutSchedule, Tenant
+from app.domain.roles import roles_service
+
+# Public job boards scanned for every candidate (verified live). Add boards here.
+DEFAULT_BOARDS: List[Dict[str, str]] = [
+    *({"portal": "greenhouse", "org": o} for o in (
+        "stripe", "airbnb", "databricks", "cloudflare", "gitlab", "figma",
+        "discord", "robinhood", "coinbase", "dropbox", "twilio", "asana",
+    )),
+    {"portal": "lever", "org": "spotify"},
+    *({"portal": "ashby", "org": o} for o in ("openai", "linear", "notion", "ramp", "supabase")),
+]
+MAX_NEW_MATCHES_PER_RUN = 50
+_SENIORITY = {"senior", "sr", "staff", "principal", "junior", "jr"}
 
 
 class ScoutError(Exception):
@@ -29,10 +43,7 @@ class ScoutSchedulerService:
         session: AsyncSession,
         tenant_id: str,
     ) -> ScoutSchedule:
-        """RD-02: Passing readiness score auto-schedules Scout cadence."""
-        # Verify gate clearance
-        await readiness_gate.verify_can_schedule_scout(session, tenant_id)
-
+        """Activates the Scout cadence (runs as soon as roles are selected; never gated on readiness)."""
         # Check tenant plan
         tenant = await session.get(Tenant, tenant_id)
         cadence = "hourly" if (tenant and tenant.plan == "pro") else "daily"
@@ -67,8 +78,6 @@ class ScoutSchedulerService:
         tenant_id: str,
     ) -> dict:
         """RD-03: Manual scan rate-limited to 3/day (Free) and 10/day (Pro)."""
-        await readiness_gate.verify_can_schedule_scout(session, tenant_id)
-
         tenant = await session.get(Tenant, tenant_id)
         is_pro = (tenant and tenant.plan == "pro")
         daily_limit = 10 if is_pro else 3
@@ -287,3 +296,124 @@ class AtsJobScraper:
 
 scout_scheduler = ScoutSchedulerService()
 ats_scraper = AtsJobScraper()
+
+
+def _words(text: str) -> Set[str]:
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _role_phrases(role: RoleSelection) -> List[Set[str]]:
+    """Word sets that identify a role in a job title: its title plus catalog aliases.
+
+    Seniority words are ignored; one-word aliases (e.g. "pm") are too broad and skipped.
+    """
+    role_def = roles_service.find_role_in_catalog(role.role_id)
+    phrases = [_words(role.title) - _SENIORITY]
+    for alias in (role_def or {}).get("aliases", []):
+        words = _words(alias) - _SENIORITY
+        if len(words) >= 2:
+            phrases.append(words)
+    return [p for p in phrases if p]
+
+
+async def run_scout(
+    session: AsyncSession,
+    tenant_id: str,
+    boards: Optional[List[Dict[str, str]]] = None,
+    client: Optional[httpx.AsyncClient] = None,
+) -> Dict[str, int]:
+    """Scans public job boards and matches postings whose title fits a selected role.
+
+    Already-matched jobs are skipped, so repeated runs only add new postings.
+    Callers must not hold an open write transaction: the network fetch takes seconds
+    and would lock SQLite for every other request.
+    """
+    from app.domain.jobs import job_service
+
+    roles = sorted(await roles_service.get_selected_roles(session, tenant_id), key=lambda r: r.rank)
+    boards = DEFAULT_BOARDS if boards is None else boards
+    if not roles:
+        return {"boards_scanned": 0, "new_matches": 0}
+    role_phrases = [(r, _role_phrases(r)) for r in roles]
+
+    fetchers = {
+        "greenhouse": AtsJobScraper.fetch_greenhouse_jobs,
+        "lever": AtsJobScraper.fetch_lever_jobs,
+        "ashby": AtsJobScraper.fetch_ashby_jobs,
+    }
+    owns_client = client is None
+    client = client or httpx.AsyncClient(timeout=20.0)
+    try:
+        results = await asyncio.gather(
+            *(fetchers[b["portal"]](b["org"], client=client) for b in boards if b["portal"] in fetchers)
+        )
+    finally:
+        if owns_client:
+            await client.aclose()
+
+    # Pair each posting with the highest-priority role it matches, then interleave companies
+    # (each company's 1st match, then 2nd, ...) so the per-run cap isn't filled by one big board.
+    candidates = []
+    for postings in results:
+        nth = 0  # this company's nth matching posting
+        for posting in postings:
+            title_words = _words(posting["title"])
+            role = next((r for r, phrases in role_phrases if any(p <= title_words for p in phrases)), None)
+            if role:
+                candidates.append((nth, role, posting))
+                nth += 1
+    candidates.sort(key=lambda c: (c[0], c[1].rank))
+
+    matched_job_ids = set(
+        (await session.execute(
+            select(JobMatch.job_id).where(JobMatch.tenant_id == tenant_id)
+        )).scalars().all()
+    )
+    new_job_ids: List[str] = []
+    new_matches = 0
+    for _, role, posting in candidates:
+        if new_matches >= MAX_NEW_MATCHES_PER_RUN:
+            break
+        job = await job_service.ingest_job(
+            session=session,
+            title=posting["title"],
+            company=posting["company"],
+            url=posting["url"],
+            description=posting["description"],
+            portal_type=posting["portal_type"],
+            location=posting.get("location") or "Remote",
+        )
+        if job.id in matched_job_ids:
+            continue
+        matched_job_ids.add(job.id)
+        new_job_ids.append(job.id)
+        session.add(JobMatch(
+            tenant_id=tenant_id,
+            job_id=job.id,
+            match_score=9.0 if role.rank == 1 else 8.0,
+            why_matched=f"Title matches your target role '{role.title}'.",
+            status="new",
+        ))
+        new_matches += 1
+
+    if new_matches:
+        from app.domain.fit_service import evaluate_tenant
+
+        await session.flush()
+        await evaluate_tenant(session, tenant_id, new_job_ids)  # real JD fit replaces the title-only score
+        await outbox.record_event(
+            session=session, tenant_id=tenant_id, event_name="jobs.found", payload={"count": new_matches}
+        )
+    await session.flush()
+    return {"boards_scanned": len(boards), "new_matches": new_matches}
+
+
+async def start_scout_in_background(tenant_id: str) -> None:
+    """Activates the Scout schedule and runs a first scan in its own session (post-response task)."""
+    from app.core.database import async_session_factory
+
+    async with async_session_factory() as session:
+        await scout_scheduler.auto_schedule_on_gate_pass(session, tenant_id)
+        await session.commit()  # release the write lock before the slow board fetch
+        await run_scout(session, tenant_id)
+        await session.commit()

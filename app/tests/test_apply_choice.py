@@ -1,7 +1,7 @@
 import pytest
 
 from app.domain.apply_choice import prepare_application
-from app.domain.models import JobListing, Tenant
+from app.domain.models import JobFit, JobListing, Tenant
 from app.domain.vault import create_initial_master
 
 
@@ -42,6 +42,8 @@ async def test_apply_choice_original_and_refine(db_session):
         description="Senior Algorithm Engineer needed with Python and mathematics expertise.",
     )
     db_session.add(job)
+    # This test is about packet preparation, not fit: seed a fit above the apply line.
+    db_session.add(JobFit(tenant_id=tenant.id, job_id=job.id, score=4.5, verdict="apply", report={}))
     await db_session.flush()
 
     # 1. Mode: original

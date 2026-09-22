@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     # OpenRouter API Key
     OPENROUTER_API_KEY: str = ""
 
+    # Mailbox OAuth apps (Google Cloud / Azure). Redirect URI to register with each provider:
+    #   {APP_BASE_URL}/api/emails/oauth/{gmail|outlook}/callback
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    MICROSOFT_CLIENT_ID: str = ""
+    MICROSOFT_CLIENT_SECRET: str = ""
+    APP_BASE_URL: str = "http://127.0.0.1:3000"  # public URL of the frontend
+
     # Host & Ports
     HOST: str = "0.0.0.0"
     PORT: int = 8000

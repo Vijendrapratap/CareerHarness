@@ -257,9 +257,9 @@ async def record_answer(
     existing_by_step[step] = section_row
     history = _format_history(existing_by_step)
 
-    # If preferences is saved, unlock todos stage
-    if step == "preferences":
-        await set_stage(session, tenant_id, "todos")
+    # Preferences is the last step: straight to the job hunt (to-dos and email are optional)
+    if step == "preferences" and (await get_or_create_journey(session, tenant_id)).stage == "counsel":
+        await set_stage(session, tenant_id, "hunt")
 
     # 4. Return next step state (first unanswered step or completed)
     next_unanswered = None

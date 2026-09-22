@@ -5,7 +5,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api.deps import get_db
 from app.api.main import app
-from app.domain.models import JobListing, Tenant
+from app.domain.models import JobFit, JobListing, Tenant
 
 
 @pytest.mark.asyncio
@@ -22,6 +22,9 @@ async def test_execution_api_full_lifecycle(db_session):
     )
     db_session.add(tenant)
     db_session.add(job)
+    await db_session.flush()
+    # Exercises the submission ladder, not fit scoring: seed a fit above the apply line.
+    db_session.add(JobFit(tenant_id=tenant.id, job_id=job.id, score=4.5, verdict="apply", report={}))
     await db_session.commit()
 
     headers = {"X-Tenant-ID": tenant.id}

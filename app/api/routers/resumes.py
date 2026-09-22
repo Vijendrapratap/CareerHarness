@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
+from app.domain.fit_service import evaluate_tenant
 from app.domain.resume_parser import resume_parser
 from app.domain.vault import create_initial_master, get_master_version
 
@@ -115,6 +116,7 @@ async def upload_resume(
             document_type="resume",
         )
 
+    await evaluate_tenant(session, tenant_id)  # new skills change every job's fit
     await session.commit()
     return ResumeResponse(
         id=parsed.id,
@@ -140,6 +142,7 @@ async def confirm_skill(
             parse_id=resume_id,
             skill_name=skill_name,
         )
+        await evaluate_tenant(session, tenant_id)
         await session.commit()
         return ResumeResponse(
             id=updated.id,

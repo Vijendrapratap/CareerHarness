@@ -124,11 +124,8 @@ class ProfilerAgent:
             )
 
             # Extract tech keywords
-            from app.domain.resume_parser import KNOWN_SKILLS
-            skills_found = [
-                skill for skill in KNOWN_SKILLS
-                if re.search(rf"\b{re.escape(skill.lower())}\b", chunk.lower())
-            ]
+            from app.domain.skills import find_skills
+            skills_found = find_skills(chunk)
 
             # Honesty reflection: Does the master resume support these metrics and skills?
             verified_against_master = True

@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db, get_tenant_id
 from app.domain.jobs import job_service
-from app.domain.models import JobListing, JobMatch
+from app.domain.models import JobFit, JobListing, JobMatch
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
@@ -59,7 +59,7 @@ async def list_matched_jobs(
     tenant_id: str = Depends(get_tenant_id),
     session: AsyncSession = Depends(get_db),
 ):
-    """Returns candidate matched jobs ordered by match quality (F8)."""
+    """Returns candidate matched jobs, best fit first, with the fit report (score /5, gates, fixes)."""
     query = (
         select(JobMatch)
         .options(selectinload(JobMatch.job))
@@ -67,16 +67,22 @@ async def list_matched_jobs(
         .order_by(JobMatch.match_score.desc())
     )
     records = (await session.execute(query)).scalars().all()
+    fits = {
+        f.job_id: f.report
+        for f in (await session.execute(select(JobFit).where(JobFit.tenant_id == tenant_id))).scalars().all()
+    }
     return [
         {
             "match_id": m.id,
             "job_id": m.job_id,
             "title": m.job.title if m.job else "Untitled Position",
             "company": m.job.company if m.job else "Unknown Company",
+            "location": m.job.location if m.job else "",
+            "url": m.job.url if m.job else "",
             "match_score": m.match_score,
             "why_matched": m.why_matched,
             "status": m.status,
+            "fit": fits.get(m.job_id),
         }
         for m in records
     ]
-

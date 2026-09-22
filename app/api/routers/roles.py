@@ -2,12 +2,14 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
+from app.domain.fit_service import evaluate_tenant
 from app.domain.roles import RoleSelectionError, roles_service
+from app.domain.scout import start_scout_in_background
 
 router = APIRouter(prefix="/api/roles", tags=["Roles"])
 
@@ -60,6 +62,7 @@ async def get_selected_roles(
 @router.post("", response_model=List[RoleItemResponse], status_code=status.HTTP_201_CREATED)
 async def select_roles(
     req: RoleSelectRequest,
+    background_tasks: BackgroundTasks,
     tenant_id: str = Depends(get_tenant_id),
     session: AsyncSession = Depends(get_db),
 ):
@@ -72,7 +75,10 @@ async def select_roles(
             mgmt_experience=req.mgmt_experience,
             priority_role_id=req.priority_role_id,
         )
+        await evaluate_tenant(session, tenant_id)  # role alignment changes every job's fit
         await session.commit()
+        # Scouting starts as soon as roles are chosen (after the response is sent).
+        background_tasks.add_task(start_scout_in_background, tenant_id)
         return [
             RoleItemResponse(
                 id=s.id,

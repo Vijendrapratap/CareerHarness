@@ -6,7 +6,7 @@ from app.domain.journey import (
     refresh_stage_from_readiness,
     set_stage,
 )
-from app.domain.models import ReadinessScore, TodoItem
+from app.domain.models import TodoItem
 
 
 @pytest.mark.asyncio
@@ -23,19 +23,10 @@ async def test_stage_does_not_move_backward(db_session, sample_tenant):
 
 
 @pytest.mark.asyncio
-async def test_ready_todos_advance_to_mailbox(db_session, sample_tenant):
+async def test_optional_todos_and_mailbox_stages_move_on_to_hunt(db_session, sample_tenant):
+    """To-dos and mailbox are optional: refresh moves a parked candidate on, even with open criticals."""
     await set_stage(db_session, sample_tenant.id, "todos")
-
-    # Score 80 and no open critical todos -> advances to mailbox
-    score = ReadinessScore(tenant_id=sample_tenant.id, overall_score=80)
-    db_session.add(score)
-    await db_session.flush()
-
-    new_stage = await refresh_stage_from_readiness(db_session, sample_tenant.id)
-    assert new_stage == "mailbox"
-
-    # Second case: with open critical todo, remains on todos
-    todo = TodoItem(
+    db_session.add(TodoItem(
         tenant_id=sample_tenant.id,
         category="bullet",
         severity="critical",
@@ -43,16 +34,9 @@ async def test_ready_todos_advance_to_mailbox(db_session, sample_tenant):
         why_it_matters="Impact unmeasured",
         fix_draft="Added 40% improvement",
         status="open",
-    )
-    db_session.add(todo)
+    ))
     await db_session.flush()
-
-    journey = await get_or_create_journey(db_session, sample_tenant.id)
-    journey.stage = "todos"
-    await db_session.flush()
-
-    blocked_stage = await refresh_stage_from_readiness(db_session, sample_tenant.id)
-    assert blocked_stage == "todos"
+    assert await refresh_stage_from_readiness(db_session, sample_tenant.id) == "hunt"
 
 
 @pytest.mark.asyncio
