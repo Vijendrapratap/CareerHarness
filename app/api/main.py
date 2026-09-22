@@ -16,6 +16,7 @@ from app.api.routers import (
     health,
     insights,
     jobs,
+    journey,
     keys,
     linkedin,
     resumes,
@@ -110,3 +111,4 @@ app.include_router(vault.router)
 app.include_router(applications.router)
 app.include_router(tracker.router)
 app.include_router(insights.router)
+app.include_router(journey.router)

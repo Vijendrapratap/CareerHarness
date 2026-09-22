@@ -805,4 +805,17 @@ class Story(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="stories")
 
 
+class CandidateJourney(Base):
+    """Tracks the candidate's current stage in the light neumorphic journey."""
+    __tablename__ = "candidate_journeys"
 
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    stage: Mapped[str] = mapped_column(String(32), nullable=False, default="counsel")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
