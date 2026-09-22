@@ -94,3 +94,31 @@ async def test_frontface_complete_api_pipeline(client, sample_tenant):
     readiness = readiness_res.json()
     assert "is_ready" in readiness
     assert "overall_score" in readiness
+
+
+@pytest.mark.asyncio
+async def test_resume_multipart_pdf_upload(client, sample_tenant):
+    """Verifies that candidate can upload a binary PDF via multipart form data."""
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.drawString(100, 750, "Lead Architect and Python Engineer with Docker expertise.")
+    c.drawString(100, 730, "- Scaled distributed data pipelines handling 5M events per day on AWS.")
+    c.save()
+    pdf_bytes = buffer.getvalue()
+
+    headers = {"X-Tenant-ID": sample_tenant.id}
+    res = await client.post(
+        "/api/resumes/upload",
+        headers=headers,
+        files={"file": ("candidate_resume.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["filename"] == "candidate_resume.pdf"
+    assert "Python" in [s["name"] for s in data["extracted_skills"]]
+    assert "Docker" in [s["name"] for s in data["extracted_skills"]]
+    assert data["confidence_score"] == 1.0

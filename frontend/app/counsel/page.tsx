@@ -21,6 +21,7 @@ export default function CounselPage() {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadedResume, setUploadedResume] = useState<{ filename: string; skillsCount: number } | null>(null);
 
   useEffect(() => {
     loadState();
@@ -79,10 +80,18 @@ export default function CounselPage() {
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || "Failed to upload resume PDF");
+        let message = "Failed to upload resume PDF";
+        if (typeof errJson.detail === "string") {
+          message = errJson.detail;
+        } else if (Array.isArray(errJson.detail)) {
+          message = errJson.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ");
+        }
+        throw new Error(message);
       }
       const data = await res.json();
-      setAnswerText(data.resume_id || file.name);
+      const skillsCount = Array.isArray(data.extracted_skills) ? data.extracted_skills.length : 0;
+      setUploadedResume({ filename: file.name, skillsCount });
+      setAnswerText(data.id || file.name);
       setInputMode("text");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -158,13 +167,18 @@ export default function CounselPage() {
                 <p className="text-xs font-semibold uppercase text-muted">Upload Resume PDF</p>
                 <input
                   type="file"
-                  accept="application/pdf"
+                  accept=".pdf,application/pdf"
                   onChange={handleResumeUpload}
                   disabled={uploadingResume}
                   className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3d6b8c] file:text-white hover:file:opacity-90 cursor-pointer"
                 />
                 {uploadingResume && (
-                  <p className="text-xs text-accent animate-pulse">Processing PDF parser...</p>
+                  <p className="text-xs text-accent animate-pulse">Parsing PDF content and extracting skills...</p>
+                )}
+                {uploadedResume && !uploadingResume && (
+                  <p className="text-xs text-emerald-600 font-medium">
+                    ✓ Uploaded & parsed {uploadedResume.filename} ({uploadedResume.skillsCount} skills detected)
+                  </p>
                 )}
               </div>
             )}
