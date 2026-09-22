@@ -114,6 +114,9 @@ class Tenant(Base):
     inbound_emails: Mapped[list["InboundEmail"]] = relationship(
         "InboundEmail", back_populates="tenant", cascade="all, delete-orphan"
     )
+    profile_sections: Mapped[list["ProfileSection"]] = relationship(
+        "ProfileSection", back_populates="tenant", cascade="all, delete-orphan"
+    )
 
 
 class ConnectedEmail(Base):
@@ -818,4 +821,30 @@ class CandidateJourney(Base):
     stage: Mapped[str] = mapped_column(String(32), nullable=False, default="counsel")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
+class ProfileSection(Base):
+    """Stores structured answers from candidate onboarding and counsel interview."""
+    __tablename__ = "profile_sections"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    section: Mapped[str] = mapped_column(String(64), nullable=False)
+    step: Mapped[str] = mapped_column(String(64), nullable=False)
+    body: Mapped[dict] = mapped_column(PortableJSON, default=dict)
+    input_mode: Mapped[str] = mapped_column(String(16), default="text")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="profile_sections")
+
+    __table_args__ = (
+        Index("ix_profile_sections_tenant_step", "tenant_id", "step", unique=True),
     )

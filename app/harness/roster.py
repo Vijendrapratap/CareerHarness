@@ -27,6 +27,14 @@ _HONESTY = (
 )
 
 AGENT_ROSTER = {
+    "counsellor": AgentSpec(
+        name="counsellor",
+        provider="openrouter",
+        tier="mid",
+        tools=("blackboard_read", "blackboard_write"),
+        hands_off_to=None,
+        system_prompt=f"You are the career counsellor. Ask the candidate eight onboarding questions. You may only store the candidate's words. {_HONESTY}",
+    ),
     "profiler": AgentSpec(
         name="profiler",
         provider="openrouter",
