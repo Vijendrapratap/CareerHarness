@@ -7,9 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.orm import selectinload
+
 from app.api.deps import get_db, get_tenant_id
 from app.domain.jobs import job_service
-from app.domain.models import JobMatch
+from app.domain.models import JobListing, JobMatch
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
@@ -58,15 +60,23 @@ async def list_matched_jobs(
     session: AsyncSession = Depends(get_db),
 ):
     """Returns candidate matched jobs ordered by match quality (F8)."""
-    query = select(JobMatch).where(JobMatch.tenant_id == tenant_id).order_by(JobMatch.match_score.desc())
+    query = (
+        select(JobMatch)
+        .options(selectinload(JobMatch.job))
+        .where(JobMatch.tenant_id == tenant_id)
+        .order_by(JobMatch.match_score.desc())
+    )
     records = (await session.execute(query)).scalars().all()
     return [
         {
             "match_id": m.id,
             "job_id": m.job_id,
+            "title": m.job.title if m.job else "Untitled Position",
+            "company": m.job.company if m.job else "Unknown Company",
             "match_score": m.match_score,
             "why_matched": m.why_matched,
             "status": m.status,
         }
         for m in records
     ]
+

@@ -28,7 +28,7 @@ export function TodayView({ score, openCriticals, trustedMode, onNavigate }: Tod
     setIsScanning(true);
     setScanMessage("Autonomous Scout scanning Greenhouse, Ashby, and Lever boards...");
     try {
-      const res = await fetch("/api/scout/manual-scan", {
+      const res = await fetch("/api/scout/scan-now", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
