@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { LogoMark } from "@/components/Logo";
 import { api } from "@/lib/api";
 
 export default function RegisterPage() {
@@ -36,12 +37,10 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-wash">
       <div className="neo-card w-full max-w-md p-8 relative overflow-hidden">
         <div className="mb-6 text-center">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-teal-600/20 mb-3 border border-teal-400/40">
-            CH
-          </div>
+          <LogoMark size={56} className="mx-auto mb-4 drop-shadow-[0_10px_18px_rgba(18,20,28,0.3)]" />
           <span className="badge-teal text-xs font-semibold py-0.5 px-2.5">Candidate Registration</span>
           <h1 className="text-2xl font-bold text-ink mt-2">Create Account</h1>
-          <p className="text-xs text-muted mt-1">Begin your guided candidate career journey with DeepSeek AI.</p>
+          <p className="text-xs text-muted mt-1">Set up in a few minutes. Scout starts as soon as you pick your roles.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

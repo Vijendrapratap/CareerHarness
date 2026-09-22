@@ -7,11 +7,16 @@ module.exports = {
   darkMode: "class",
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-body)", "ui-sans-serif", "sans-serif"],
+      },
       colors: {
-        wash: "#ebf1f7",
-        ink: "#0f172a",
-        muted: "#475569",
-        accent: "#0d9488",
+        wash: "#eceef3",
+        ink: "#12141c",
+        muted: "#4b5366",
+        accent: "#0e9f8e",
+        rope: { 400: "#ff8a3d", 500: "#ff5a3d", 600: "#ef3e5c" },
         teal: {
           50: "#f0fdfa",
           100: "#ccfbf1",

@@ -317,10 +317,10 @@ export default function SettingsPage() {
                       onChange={(e) => setSelectedProvider(e.target.value)}
                       className="neo-inset w-full px-4 py-2.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
                     >
-                      <option value="openrouter">OpenRouter (DeepSeek v4.1 default)</option>
-                      <option value="openai">OpenAI (GPT-4o, o3-mini)</option>
-                      <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
-                      <option value="gemini">Google Gemini (Gemini 2.0 Flash)</option>
+                      <option value="openrouter">OpenRouter</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic</option>
+                      <option value="gemini">Google Gemini</option>
                     </select>
                   </div>
 

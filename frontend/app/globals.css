@@ -2,264 +2,194 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * CareerHarness — "chalk & rope".
+ * A climbing harness for your career: chalk-white neumorphic surfaces (the wall),
+ * granite ink text, carabiner teal for action, one rope-orange accent for focus.
+ */
 :root {
-  --wash: #ebf1f7;
-  --ink: #0f172a;
-  --muted: #475569;
-  --accent: #0d9488;
-  --accent-cyan: #0891b2;
-  --accent-bronze: #d97706;
-  --accent-emerald: #059669;
-  --shadow-dark: #cbd5e1;
+  --chalk: #eceef3;
+  --chalk-deep: #e2e5ec;
+  --granite: #12141c;
+  --slate: #4b5366;
+  --carabiner: #0e9f8e;
+  --carabiner-deep: #0a7d80;
+  --rope: #ff5a3d;
+  --rope-hot: #ef3e5c;
+  --shadow-dark: rgba(150, 160, 181, 0.55);
   --shadow-light: #ffffff;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* legacy aliases still referenced by pages */
+  --wash: var(--chalk);
+  --ink: var(--granite);
+  --muted: var(--slate);
+  --accent: var(--carabiner);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background-color: #edf3f8;
-  background-image: 
-    radial-gradient(ellipse at 10% 5%, rgba(13, 148, 136, 0.09) 0%, transparent 45%),
-    radial-gradient(ellipse at 90% 10%, rgba(2, 132, 199, 0.08) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 50%, rgba(245, 158, 11, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 85%, rgba(16, 185, 129, 0.07) 0%, transparent 45%),
-    radial-gradient(ellipse at 15% 90%, rgba(249, 115, 22, 0.05) 0%, transparent 40%);
+  background-color: var(--chalk);
+  background-image:
+    radial-gradient(rgba(18, 20, 28, 0.045) 1px, transparent 1.2px),
+    radial-gradient(ellipse 60% 45% at 0% 0%, rgba(14, 159, 142, 0.10), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 100% 100%, rgba(255, 90, 61, 0.08), transparent 70%);
+  background-size: 22px 22px, 100% 100%, 100% 100%;
   background-attachment: fixed;
-  color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--granite);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   margin: 0;
   min-height: 100vh;
-  letter-spacing: -0.01em;
 }
 
-/* Frosted Neumorphic Elements */
+h1, h2, h3, h4 {
+  font-family: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: rgba(255, 90, 61, 0.22);
+}
+
+:focus-visible {
+  outline: 2px solid var(--rope);
+  outline-offset: 2px;
+}
+
+/* ---- Neumorphic surfaces: soft lift, a lit top edge, cool granite shadow ---- */
 .neo-raised {
-  background: rgba(235, 241, 247, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: var(--chalk);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 18px;
-  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    6px 6px 14px var(--shadow-dark),
+    -6px -6px 14px var(--shadow-light);
 }
 
-.neo-card {
-  background: rgba(235, 241, 247, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  box-shadow: 6px 6px 16px var(--shadow-dark), -6px -6px 16px var(--shadow-light);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+.neo-card,
 .neo-card-interactive {
-  background: rgba(235, 241, 247, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  box-shadow: 6px 6px 16px var(--shadow-dark), -6px -6px 16px var(--shadow-light);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(160deg, #f2f4f8 0%, var(--chalk) 60%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    9px 9px 22px var(--shadow-dark),
+    -9px -9px 22px var(--shadow-light);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
 }
 
 .neo-card-interactive:hover {
   transform: translateY(-2px);
-  border-color: rgba(13, 148, 136, 0.35);
-  box-shadow: 8px 12px 24px rgba(203, 213, 225, 0.95), -8px -8px 22px #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 1px rgba(255, 90, 61, 0.18),
+    12px 16px 30px var(--shadow-dark),
+    -10px -10px 24px var(--shadow-light);
 }
 
 .neo-inset {
-  background: var(--wash);
+  background: var(--chalk-deep);
   border-radius: 14px;
-  border: 1px solid rgba(203, 213, 225, 0.45);
-  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  border: 1px solid rgba(150, 160, 181, 0.18);
+  box-shadow:
+    inset 3px 3px 7px var(--shadow-dark),
+    inset -3px -3px 7px var(--shadow-light);
 }
 
+/* Pressed = selected. The rope strand along the bottom marks "you are here". */
 .neo-pressed {
-  background: var(--wash);
-  color: #0f766e;
+  background:
+    linear-gradient(90deg, var(--rope), var(--rope-hot)) bottom / 100% 3px no-repeat,
+    var(--chalk-deep);
+  color: var(--granite);
   border-radius: 14px;
-  border: 1px solid rgba(13, 148, 136, 0.35);
-  box-shadow: inset 3px 3px 7px rgba(13, 148, 136, 0.2), inset -3px -3px 7px var(--shadow-light);
+  border: 1px solid rgba(150, 160, 181, 0.2);
+  box-shadow:
+    inset 3px 3px 7px var(--shadow-dark),
+    inset -3px -3px 7px var(--shadow-light);
 }
 
-/* Executive Interactive Buttons with Tactile Press */
-.btn-teal {
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  color: #ffffff;
-  font-weight: 600;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35), -2px -2px 6px #ffffff;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-teal:hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.45), -3px -3px 8px #ffffff;
-}
-
-.btn-teal:active {
-  transform: translateY(1px) scale(0.97);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.btn-bronze {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  color: #ffffff;
-  font-weight: 600;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35), -2px -2px 6px #ffffff;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-bronze:hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-}
-
-.btn-bronze:active {
-  transform: translateY(1px) scale(0.97);
-}
-
-.btn-amber {
-  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-  color: #ffffff;
-  font-weight: 600;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35), -2px -2px 6px #ffffff;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-amber:hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.45), -3px -3px 8px #ffffff;
-}
-
-.btn-amber:active {
-  transform: translateY(1px) scale(0.97);
-}
-
+/* ---- Buttons: tactile, bold, one job each ---- */
+.btn-teal,
+.btn-amber,
+.btn-bronze,
 .btn-sky {
-  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35), -2px -2px 6px #ffffff;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out), filter 0.16s var(--ease-out);
 }
 
+.btn-teal:hover,
+.btn-amber:hover,
+.btn-bronze:hover,
 .btn-sky:hover {
-  filter: brightness(1.06);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.45), -3px -3px 8px #ffffff;
+  filter: brightness(1.05) saturate(1.05);
 }
 
+.btn-teal:active,
+.btn-amber:active,
+.btn-bronze:active,
 .btn-sky:active {
   transform: translateY(1px) scale(0.97);
 }
 
-/* Modern Status Badges */
-.badge-teal {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #ccfbf1;
-  color: #0f766e;
-  border: 1px solid rgba(13, 148, 136, 0.3);
+.btn-teal:disabled,
+.btn-amber:disabled,
+.btn-bronze:disabled,
+.btn-sky:disabled {
+  transform: none;
+  filter: grayscale(0.3);
 }
 
-.badge-emerald {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #d1fae5;
-  color: #047857;
-  border: 1px solid rgba(5, 150, 105, 0.3);
+/* Primary action: anodized carabiner */
+.btn-teal {
+  background: linear-gradient(140deg, #13b8a4 0%, var(--carabiner) 45%, var(--carabiner-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 6px 16px -4px rgba(14, 159, 142, 0.55),
+    -4px -4px 10px var(--shadow-light);
 }
 
-.badge-bronze {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid rgba(217, 119, 6, 0.3);
+/* The one loud call: rope orange */
+.btn-amber,
+.btn-bronze {
+  background: linear-gradient(140deg, #ff8a3d 0%, var(--rope) 50%, var(--rope-hot) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 8px 20px -6px rgba(255, 90, 61, 0.65),
+    -4px -4px 10px var(--shadow-light);
 }
 
-.badge-amber {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+/* Strong secondary: granite */
+.btn-sky {
+  background: linear-gradient(160deg, #262a38 0%, var(--granite) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 6px 16px -6px rgba(18, 20, 28, 0.6),
+    -4px -4px 10px var(--shadow-light);
 }
 
-.badge-orange {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #ffedd5;
-  color: #c2410c;
-  border: 1px solid rgba(234, 88, 12, 0.35);
-}
-
-.badge-cyan {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #cffafe;
-  color: #0e7490;
-  border: 1px solid rgba(6, 182, 212, 0.3);
-}
-
-.badge-sky {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid rgba(2, 132, 199, 0.3);
-}
-
-.badge-blue {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid rgba(37, 99, 235, 0.3);
-}
-
+/* ---- Badges ---- */
+.badge-teal,
+.badge-emerald,
+.badge-bronze,
+.badge-amber,
+.badge-orange,
+.badge-cyan,
+.badge-sky,
+.badge-blue,
 .badge-rose {
   display: inline-flex;
   align-items: center;
@@ -267,10 +197,30 @@ body {
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
   font-size: 0.75rem;
-  font-weight: 600;
-  background: #ffe4e6;
-  color: #be123c;
-  border: 1px solid rgba(225, 29, 72, 0.35);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+
+.badge-teal,
+.badge-cyan { background: #d3f5ef; color: #07665f; border-color: rgba(14, 159, 142, 0.28); }
+.badge-emerald { background: #d7f7e6; color: #06683f; border-color: rgba(5, 150, 105, 0.28); }
+.badge-amber,
+.badge-bronze,
+.badge-orange { background: #ffe6dc; color: #c2361c; border-color: rgba(255, 90, 61, 0.32); }
+.badge-sky,
+.badge-blue { background: #e1e5ef; color: #262a38; border-color: rgba(18, 20, 28, 0.14); }
+.badge-rose { background: #ffe1e6; color: #b3123d; border-color: rgba(225, 29, 72, 0.3); }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @keyframes fadeInSlideUp {

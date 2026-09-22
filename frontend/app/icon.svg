@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="chTile" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1d2130"/><stop offset="1" stop-color="#0d0f15"/>
+    </linearGradient>
+    <linearGradient id="chRope" x1="21" y1="40" x2="41" y2="24" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff4d5e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#chTile)"/>
+  <!-- carabiner spine + basket, opening at top-right -->
+  <path d="M44 15.5H26.5A10.5 10.5 0 0 0 16 26v12a10.5 10.5 0 0 0 10.5 10.5h11A10.5 10.5 0 0 0 48 38V32" stroke="#f3f1ec" stroke-width="5" stroke-linecap="round"/>
+  <!-- gate, swung slightly open -->
+  <path d="M48 24.5 44.5 16" stroke="#2dd4bf" stroke-width="5" stroke-linecap="round"/>
+  <!-- summit inside the loop -->
+  <path d="M22.5 40 29 31.5l3.5 4.5 5.5-8 5 12" stroke="url(#chRope)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
