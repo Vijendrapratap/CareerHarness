@@ -140,66 +140,121 @@ export default function CounselPage() {
     <Shell title="Career Counsellor">
       <div className="max-w-2xl mx-auto space-y-6">
         {loading ? (
-          <div className="neo-raised p-8 text-center text-muted">
-            Connecting to your career counsellor...
+          <div className="neo-card p-10 text-center text-muted">
+            <div className="inline-block h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin mb-3" />
+            <p className="text-sm">Connecting to your career counsellor agent...</p>
           </div>
         ) : counselState?.done ? (
-          <div className="neo-raised p-8 text-center space-y-4">
-            <h2 className="text-xl font-bold text-ink">Onboarding Complete</h2>
-            <p className="text-muted">All profile sections have been recorded. Advancing to To-Dos...</p>
+          <div className="neo-card p-10 text-center space-y-4">
+            <div className="inline-flex h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 items-center justify-center text-xl font-bold mb-2">
+              ✓
+            </div>
+            <h2 className="text-2xl font-bold text-ink">Onboarding Complete</h2>
+            <p className="text-sm text-muted">All profile sections have been recorded. Advancing to To-Dos...</p>
+            <button
+              onClick={() => window.location.assign("/todos")}
+              className="btn-teal px-6 py-2.5 text-xs font-bold uppercase tracking-wider mt-4"
+            >
+              Continue to Action Items →
+            </button>
           </div>
         ) : (
-          <div className="neo-raised p-8 space-y-6">
+          <div className="neo-card p-8 space-y-6">
+            {/* Step Progress Bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-semibold tracking-wider text-muted">
+                <span className="text-xs uppercase font-bold tracking-wider text-teal-800">
                   Question: {counselState?.step?.replace("_", " ")}
                 </span>
-                <span className="text-xs text-accent font-medium">Candidate Onboarding</span>
+                <span className="badge-teal text-[11px] py-0.5 px-2">
+                  AI Counsellor • DeepSeek
+                </span>
               </div>
-              <h2 className="text-xl font-semibold text-ink leading-relaxed">
+
+              {/* Progress Track */}
+              <div className="w-full h-2 rounded-full bg-slate-200/80 overflow-hidden p-0.5 border border-slate-300/40">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-300 shadow-sm"
+                  style={{
+                    width: counselState?.step
+                      ? `${
+                          (([
+                            "linkedin",
+                            "resume",
+                            "target_work",
+                            "priority_role",
+                            "management",
+                            "location",
+                            "authorization",
+                            "preferences",
+                          ].indexOf(counselState.step) +
+                            1) /
+                            8) *
+                          100
+                        }%`
+                      : "12%",
+                  }}
+                />
+              </div>
+
+              <h2 className="text-xl font-bold text-ink leading-relaxed pt-2">
                 {counselState?.prompt}
               </h2>
             </div>
 
             {counselState?.step === "resume" && (
-              <div className="p-4 rounded-xl border border-dashed border-[#c5ced8] bg-wash/50 space-y-2">
-                <p className="text-xs font-semibold uppercase text-muted">Upload Resume PDF</p>
+              <div className="p-5 rounded-2xl border-2 border-dashed border-teal-500/40 bg-teal-50/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📄</span>
+                  <p className="text-xs font-bold uppercase tracking-wide text-teal-900">
+                    Upload Resume PDF (Extracts Skills & Metrics)
+                  </p>
+                </div>
                 <input
                   type="file"
                   accept=".pdf,application/pdf"
                   onChange={handleResumeUpload}
                   disabled={uploadingResume}
-                  className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3d6b8c] file:text-white hover:file:opacity-90 cursor-pointer"
+                  className="block w-full text-xs text-muted file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gradient-to-r file:from-teal-600 file:to-cyan-600 file:text-white hover:file:opacity-95 cursor-pointer"
                 />
                 {uploadingResume && (
-                  <p className="text-xs text-accent animate-pulse">Parsing PDF content and extracting skills...</p>
+                  <p className="text-xs text-cyan-700 animate-pulse font-medium">
+                    Parsing PDF document and extracting honest skills...
+                  </p>
                 )}
                 {uploadedResume && !uploadingResume && (
-                  <p className="text-xs text-emerald-600 font-medium">
-                    ✓ Uploaded & parsed {uploadedResume.filename} ({uploadedResume.skillsCount} skills detected)
-                  </p>
+                  <div className="badge-emerald py-1 px-3">
+                    <span>✓ Uploaded & parsed {uploadedResume.filename}</span>
+                    <span className="font-bold">({uploadedResume.skillsCount} skills detected)</span>
+                  </div>
                 )}
               </div>
             )}
 
             {counselState?.choices && counselState.choices.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase text-muted">Recommended Choices:</p>
+                <p className="text-xs font-bold uppercase text-muted">Recommended Options:</p>
                 <div className="flex flex-wrap gap-2">
-                  {counselState.choices.map((choice) => (
-                    <button
-                      key={choice}
-                      type="button"
-                      onClick={() => {
-                        setAnswerText(choice);
-                        setInputMode("text");
-                      }}
-                      className="neo-raised px-3 py-1.5 text-xs font-medium text-ink hover:text-accent transition-colors"
-                    >
-                      {choice}
-                    </button>
-                  ))}
+                  {counselState.choices.map((choice) => {
+                    const isSelected = answerText === choice;
+                    return (
+                      <button
+                        key={choice}
+                        type="button"
+                        onClick={() => {
+                          setAnswerText(choice);
+                          setInputMode("text");
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-150 ${
+                          isSelected
+                            ? "neo-pressed text-teal-800 font-bold border border-teal-500/50"
+                            : "neo-raised text-ink hover:text-teal-700 hover:border-teal-400"
+                        }`}
+                      >
+                        {choice}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -209,24 +264,24 @@ export default function CounselPage() {
                 <button
                   type="button"
                   onClick={() => setAnswerText("yes")}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg ${
+                  className={`px-4 py-2.5 text-xs font-semibold rounded-xl transition-all ${
                     answerText.toLowerCase() === "yes"
-                      ? "neo-pressed text-accent"
-                      : "neo-raised text-ink"
+                      ? "neo-pressed text-emerald-700 font-bold border border-emerald-500/40 bg-emerald-50/40"
+                      : "neo-raised text-ink hover:text-teal-700"
                   }`}
                 >
-                  Yes, I have management experience
+                  ✓ Yes, I have management experience
                 </button>
                 <button
                   type="button"
                   onClick={() => setAnswerText("no")}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg ${
+                  className={`px-4 py-2.5 text-xs font-semibold rounded-xl transition-all ${
                     answerText.toLowerCase() === "no"
-                      ? "neo-pressed text-accent"
-                      : "neo-raised text-ink"
+                      ? "neo-pressed text-slate-700 font-bold border border-slate-400"
+                      : "neo-raised text-ink hover:text-slate-600"
                   }`}
                 >
-                  No management experience
+                  ✕ No management experience
                 </button>
               </div>
             )}
@@ -244,13 +299,13 @@ export default function CounselPage() {
                     setAnswerText(e.target.value);
                     setInputMode("text");
                   }}
-                  className="neo-inset w-full p-4 text-ink bg-transparent focus:outline-none resize-none"
-                  placeholder="Type your response, or click Speak to use microphone..."
+                  className="neo-inset w-full p-4 text-sm text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl resize-none transition-all"
+                  placeholder="Type your response, select an option above, or click Speak..."
                 />
               </div>
 
               {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
                   {error}
                 </div>
               )}
@@ -260,18 +315,22 @@ export default function CounselPage() {
                   type="button"
                   onClick={handleSpeak}
                   disabled={listening || submitting}
-                  className="neo-raised px-4 py-2.5 text-xs font-semibold text-ink hover:text-accent flex items-center gap-2"
+                  className={`px-4 py-2.5 text-xs font-semibold rounded-xl flex items-center gap-2 transition-all ${
+                    listening
+                      ? "bg-rose-100 text-rose-700 border border-rose-300 animate-pulse shadow-sm"
+                      : "neo-raised text-ink hover:text-teal-700 hover:-translate-y-0.5"
+                  }`}
                 >
                   <span>🎙️</span>
-                  <span>{listening ? "Listening..." : "Speak"}</span>
+                  <span>{listening ? "Listening..." : "Speak Answer"}</span>
                 </button>
 
                 <button
                   type="submit"
                   disabled={submitting || !answerText.trim()}
-                  className="neo-pressed px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                  className="btn-teal px-7 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
                 >
-                  {submitting ? "Saving..." : "Save Answer"}
+                  {submitting ? "Saving..." : "Save & Continue →"}
                 </button>
               </div>
             </form>

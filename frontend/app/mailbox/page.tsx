@@ -57,26 +57,31 @@ export default function MailboxPage() {
   return (
     <Shell title="Connect Mailbox">
       <div className="max-w-xl mx-auto space-y-6">
-        <div className="neo-raised p-8 space-y-6">
+        <div className="neo-card p-8 space-y-6">
           <div className="space-y-2">
-            <span className="text-xs uppercase font-semibold tracking-wider text-muted">
-              Step 3: Mailbox Connection
-            </span>
-            <h2 className="text-xl font-bold text-ink">Connect Your Application Mailbox</h2>
-            <p className="text-sm text-muted">
-              The agent sends from this mailbox only after you approve a message.
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase font-bold tracking-wider text-teal-800">
+                Step 3: Mailbox Connection
+              </span>
+              <span className="badge-emerald text-[10px] py-0.5 px-2">
+                AES-256 Envelope Encrypted
+              </span>
+            </div>
+            <h2 className="text-xl font-bold text-ink tracking-tight">Connect Your Application Mailbox</h2>
+            <p className="text-xs text-muted leading-relaxed">
+              The autonomous hunter sends emails from this mailbox only after you review and approve each message packet.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1.5">
                 Email Provider
               </label>
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="neo-inset w-full px-4 py-3 text-ink bg-transparent focus:outline-none"
+                className="neo-inset w-full px-4 py-3 text-sm text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl transition-all"
               >
                 <option value="gmail">Google Gmail</option>
                 <option value="outlook">Microsoft Outlook</option>
@@ -85,7 +90,7 @@ export default function MailboxPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1.5">
                 Email Address
               </label>
               <input
@@ -93,41 +98,41 @@ export default function MailboxPage() {
                 required
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
-                className="neo-inset w-full px-4 py-3 text-ink bg-transparent focus:outline-none"
+                className="neo-inset w-full px-4 py-3 text-sm text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl transition-all"
                 placeholder="you@company.com"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1">
-                Access Token
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1.5">
+                OAuth Access Token
               </label>
               <input
                 type="password"
                 required
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
-                className="neo-inset w-full px-4 py-3 text-ink bg-transparent focus:outline-none font-mono text-xs"
-                placeholder="OAuth access token (envelope encrypted)"
+                className="neo-inset w-full px-4 py-3 text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl font-mono text-xs transition-all"
+                placeholder="Access token (decrypted in worker memory only)"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1">
-                Refresh Token
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-1.5">
+                OAuth Refresh Token
               </label>
               <input
                 type="password"
                 required
                 value={refreshToken}
                 onChange={(e) => setRefreshToken(e.target.value)}
-                className="neo-inset w-full px-4 py-3 text-ink bg-transparent focus:outline-none font-mono text-xs"
+                className="neo-inset w-full px-4 py-3 text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl font-mono text-xs transition-all"
                 placeholder="OAuth refresh token"
               />
             </div>
 
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+              <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
                 {error}
               </div>
             )}
@@ -136,9 +141,9 @@ export default function MailboxPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="neo-pressed w-full py-3 text-xs font-bold uppercase tracking-wider text-accent transition-all disabled:opacity-50"
+                className="btn-teal w-full py-3.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
               >
-                {loading ? "Connecting & Verifying..." : "Connect & Continue to Jobs →"}
+                {loading ? "Connecting & Verifying..." : "Connect & Continue to Scouted Jobs →"}
               </button>
             </div>
           </form>

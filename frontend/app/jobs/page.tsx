@@ -169,84 +169,94 @@ export default function JobsPage() {
     <Shell title="Scouted Jobs Board">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Scout Trigger Header */}
-        <div className="neo-raised p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <span className="text-xs uppercase font-semibold tracking-wider text-muted">
-              Live ATS Discovery
-            </span>
-            <h2 className="text-lg font-bold text-ink">Autonomous ATS Match Feed</h2>
-            <p className="text-xs text-muted mt-1">
-              Scouts Greenhouse, Lever, and Ashby postings grounded in your verified target roles.
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs uppercase font-bold tracking-wider text-teal-800">
+                Live ATS Discovery
+              </span>
+              <span className="badge-cyan text-[10px] py-0.5 px-2">Greenhouse • Lever • Ashby</span>
+            </div>
+            <h2 className="text-lg font-bold text-ink tracking-tight">Autonomous Match Pipeline</h2>
+            <p className="text-xs text-muted mt-0.5">
+              Scouts verified public postings with DeepSeek matching algorithms grounded in your target roles.
             </p>
           </div>
           <div>
             <button
               onClick={handleScanNow}
               disabled={isScanDisabled || scanning}
-              className={`neo-pressed px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
                 isScanDisabled
-                  ? "opacity-50 cursor-not-allowed text-muted"
-                  : "text-accent hover:opacity-90"
+                  ? "neo-inset opacity-50 cursor-not-allowed text-muted"
+                  : "btn-teal"
               }`}
             >
-              {scanning ? "Scanning Portals..." : "Trigger Scout Now"}
+              {scanning ? "Scanning Portals..." : "Trigger Scout Now ⚡"}
             </button>
           </div>
         </div>
 
         {isScanDisabled && (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-            Scouting is locked while in the <strong>{stage}</strong> stage. Clear your profile checklist and connect a mailbox to unlock.
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-900 flex items-center gap-2">
+            <span>⚠️</span>
+            <span>
+              Scouting is paused during the <strong>{stage}</strong> stage. Clear your profile checklist and connect a mailbox to unlock autonomous hunt.
+            </span>
           </div>
         )}
 
         {error && (
-          <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+          <div className="p-4 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
             {error}
           </div>
         )}
 
         {scanMessage && (
-          <div className="p-4 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl">
-            {scanMessage}
+          <div className="p-4 text-xs text-emerald-900 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2">
+            <span>✓</span>
+            <span>{scanMessage}</span>
           </div>
         )}
 
         {submitSuccess && (
-          <div className="p-4 text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-            <span>{submitSuccess}</span>
+          <div className="p-4 text-xs text-emerald-900 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>✓</span>
+              <span className="font-medium">{submitSuccess}</span>
+            </div>
             <button
               onClick={() => window.location.assign("/applications")}
-              className="text-xs font-bold uppercase tracking-wider text-accent underline ml-4"
+              className="text-xs font-bold uppercase tracking-wider text-teal-800 underline hover:text-teal-950 ml-4"
             >
-              View Applications →
+              View Pipeline →
             </button>
           </div>
         )}
 
         {/* Prepared Packet Review Modal / Panel */}
         {activePacket && (
-          <div className="neo-raised p-6 space-y-4 border-2 border-[#3d6b8c]/30">
+          <div className="neo-card p-6 space-y-4 border-2 border-teal-500/40 shadow-xl shadow-teal-900/10">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs uppercase font-bold text-accent tracking-wider">
+                <span className="text-xs uppercase font-bold text-teal-800 tracking-wider">
                   Prepared Packet ({activePacket.mode === "original" ? "Original Master" : "Refined / Tailored"})
                 </span>
-                <h3 className="text-lg font-bold text-ink">Ready for Honest Review</h3>
+                <h3 className="text-lg font-bold text-ink tracking-tight">Ready for Honest Review</h3>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800">
+                <span className="badge-emerald">
                   Honesty Verified: {activePacket.honesty_review?.is_honest ? "100% Truthful" : "Flagged"}
                 </span>
-                <span className="text-xs font-mono text-muted">
-                  Source: {activePacket.draft_source}
+                <span className="badge-cyan text-[11px]">
+                  {activePacket.draft_source}
                 </span>
               </div>
             </div>
 
             {/* Resume Summary / Top Bullets */}
-            <div className="neo-inset p-4 space-y-2 text-xs">
-              <span className="font-bold text-ink uppercase block">Resume Content Preview:</span>
+            <div className="neo-inset p-4 space-y-2 text-xs rounded-xl">
+              <span className="font-bold text-teal-900 uppercase block">Resume Content Preview:</span>
               <p className="text-ink">
                 <strong>Target Role:</strong> {activePacket.resume_content?.summary || "Factual alignment verified."}
               </p>
@@ -255,7 +265,7 @@ export default function JobsPage() {
                   <span className="font-semibold text-ink">
                     Top Highlight ({activePacket.resume_content.experience[0].company}):
                   </span>
-                  <ul className="list-disc list-inside mt-1 space-y-1">
+                  <ul className="list-disc list-inside mt-1 space-y-1 font-mono text-[11px]">
                     {activePacket.resume_content.experience[0].bullets?.slice(0, 2).map((b, i) => (
                       <li key={i}>{b}</li>
                     ))}
@@ -266,9 +276,9 @@ export default function JobsPage() {
 
             {/* Cover Letter Preview */}
             {activePacket.cover_letter && (
-              <div className="neo-inset p-4 text-xs space-y-1">
-                <span className="font-bold text-ink uppercase block">Drafted Cover Letter:</span>
-                <p className="whitespace-pre-line text-ink font-serif text-sm">
+              <div className="neo-inset p-4 text-xs space-y-1.5 rounded-xl">
+                <span className="font-bold text-teal-900 uppercase block">Drafted Cover Letter:</span>
+                <p className="whitespace-pre-line text-ink font-serif text-xs leading-relaxed bg-white/40 p-3 rounded-lg border border-slate-200/40">
                   {activePacket.cover_letter.body_text}
                 </p>
               </div>
@@ -278,7 +288,7 @@ export default function JobsPage() {
               <button
                 type="button"
                 onClick={() => setActivePacket(null)}
-                className="neo-raised px-4 py-2 text-xs font-semibold text-muted hover:text-ink"
+                className="neo-raised px-4 py-2 text-xs font-semibold text-muted hover:text-ink rounded-xl"
               >
                 Cancel
               </button>
@@ -286,7 +296,7 @@ export default function JobsPage() {
                 type="button"
                 disabled={submitting}
                 onClick={handleSubmitPacket}
-                className="neo-pressed px-6 py-2 text-xs font-bold text-accent uppercase tracking-wider disabled:opacity-50"
+                className="btn-teal px-6 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
               >
                 {submitting ? "Submitting Packet..." : "Submit This Packet →"}
               </button>
@@ -296,55 +306,70 @@ export default function JobsPage() {
 
         {/* Job Matches Listing */}
         {loading ? (
-          <div className="neo-raised p-8 text-center text-muted">Loading scouted jobs...</div>
+          <div className="neo-card p-10 text-center text-muted">
+            <div className="inline-block h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin mb-3" />
+            <p className="text-sm">Scouting live ATS job boards for matching positions...</p>
+          </div>
         ) : jobs.length === 0 ? (
-          <div className="neo-raised p-8 text-center space-y-3">
+          <div className="neo-card p-10 text-center space-y-3">
             <h3 className="text-lg font-bold text-ink">No Matched Jobs Yet</h3>
-            <p className="text-sm text-muted">
-              Trigger a scout scan above to discover matching roles from public ATS pipelines.
+            <p className="text-xs text-muted max-w-md mx-auto">
+              Click &quot;Trigger Scout Now&quot; above to search live Greenhouse, Lever, and Ashby pipelines for roles matching your profile.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             {jobs.map((item) => (
-              <div key={item.match_id} className="neo-raised p-6 space-y-4">
+              <div key={item.match_id} className="neo-card-interactive p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-base font-bold text-ink">{item.title}</h3>
-                    <p className="text-xs font-semibold text-accent mt-0.5">{item.company}</p>
+                    <h3 className="text-base font-bold text-ink tracking-tight">{item.title}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="badge-teal text-[11px] font-bold">{item.company}</span>
+                      <span className="text-[11px] text-muted uppercase font-semibold">
+                        Status: {item.status}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="neo-inset px-3 py-1 text-xs font-bold text-ink">
+                    <span
+                      className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        item.match_score >= 8.0
+                          ? "badge-emerald"
+                          : item.match_score >= 6.0
+                          ? "badge-cyan"
+                          : "badge-bronze"
+                      }`}
+                    >
                       Fit: {item.match_score.toFixed(1)} / 10
-                    </span>
-                    <span className="text-xs uppercase px-2 py-0.5 rounded font-semibold text-muted bg-[#c5ced8]/30">
-                      {item.status}
                     </span>
                   </div>
                 </div>
 
-                <div className="neo-inset p-3 text-xs text-muted">
-                  <span className="font-semibold text-ink block mb-0.5">Matching Rationale:</span>
-                  {item.why_matched || "Matched based on core baseline skill alignment and title match."}
+                <div className="neo-inset p-3.5 text-xs text-muted rounded-xl border border-slate-200/40">
+                  <span className="font-bold text-ink block mb-0.5">Matching Rationale:</span>
+                  <p className="leading-relaxed">
+                    {item.why_matched || "Matched based on core baseline skill alignment and role focus."}
+                  </p>
                 </div>
 
-                {/* Apply Buttons (Wired in Task 8) */}
-                <div className="flex items-center justify-end gap-3 pt-2">
+                {/* Apply Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-1">
                   <button
                     type="button"
                     disabled={preparingJobId === item.job_id}
                     onClick={() => handleChoose(item.job_id, "original")}
-                    className="neo-raised px-4 py-2 text-xs font-semibold text-ink hover:text-accent transition-colors disabled:opacity-50"
+                    className="neo-raised px-4 py-2 text-xs font-semibold text-ink hover:text-teal-700 hover:border-teal-400 rounded-xl transition-all disabled:opacity-50"
                   >
-                    {preparingJobId === item.job_id ? "Preparing..." : "Use my resume"}
+                    {preparingJobId === item.job_id ? "Preparing..." : "Use Original Master"}
                   </button>
                   <button
                     type="button"
                     disabled={preparingJobId === item.job_id}
                     onClick={() => handleChoose(item.job_id, "refine")}
-                    className="neo-pressed px-4 py-2 text-xs font-bold text-accent uppercase tracking-wider transition-colors disabled:opacity-50"
+                    className="btn-teal px-5 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
                   >
-                    {preparingJobId === item.job_id ? "Tailoring..." : "Refine for this job"}
+                    {preparingJobId === item.job_id ? "Tailoring..." : "Refine for this job ✦"}
                   </button>
                 </div>
               </div>

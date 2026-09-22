@@ -90,32 +90,58 @@ export default function TodosPage() {
     <Shell title="Front-Face To-Dos">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Readiness Overview */}
-        <div className="neo-raised p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <span className="text-xs uppercase tracking-wider text-muted font-semibold">
-              Readiness Status
-            </span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs uppercase tracking-wider text-muted font-semibold">
+                Readiness Evaluation
+              </span>
+              <span className="badge-teal text-[10px] py-0.5 px-2">Autonomous Gate</span>
+            </div>
             <h2 className="text-lg font-bold text-ink">
               {readiness?.is_ready ? (
-                <span className="text-emerald-700">✓ Ready to Scout & Hunt</span>
+                <span className="text-emerald-700 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Ready to Scout & Hunt
+                </span>
               ) : (
-                <span>Gate Locked (Score ≥ 70 & 0 Criticals Required)</span>
+                <span className="text-amber-700 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  Gate Locked (Score ≥ 70 & 0 Criticals Required)
+                </span>
               )}
             </h2>
             <p className="text-xs text-muted mt-1">
               Dismissing a critical to-do permanently caps your score at 69.
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center neo-inset px-4 py-2">
-              <span className="text-xs text-muted block">Score</span>
-              <span className="text-xl font-extrabold text-ink">
-                {readiness?.overall_score ?? "--"} / 100
+          <div className="flex items-center gap-3">
+            <div className="text-center neo-inset px-5 py-2.5 rounded-xl">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted block">
+                Score
+              </span>
+              <span
+                className={`text-xl font-extrabold ${
+                  (readiness?.overall_score ?? 0) >= 70
+                    ? "text-emerald-700"
+                    : "text-amber-700"
+                }`}
+              >
+                {readiness?.overall_score ?? "--"}
+                <span className="text-xs font-normal text-muted"> / 100</span>
               </span>
             </div>
-            <div className="text-center neo-inset px-4 py-2">
-              <span className="text-xs text-muted block">Criticals</span>
-              <span className="text-xl font-extrabold text-red-600">
+            <div className="text-center neo-inset px-5 py-2.5 rounded-xl">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted block">
+                Criticals
+              </span>
+              <span
+                className={`text-xl font-extrabold ${
+                  (readiness?.open_criticals ?? 0) > 0
+                    ? "text-rose-600"
+                    : "text-emerald-700"
+                }`}
+              >
                 {readiness?.open_criticals ?? "--"}
               </span>
             </div>
@@ -123,55 +149,62 @@ export default function TodosPage() {
         </div>
 
         {error && (
-          <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+          <div className="p-4 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
             {error}
           </div>
         )}
 
         {/* Todo Cards */}
         {loading ? (
-          <div className="neo-raised p-8 text-center text-muted">
-            Analyzing your resume and profile gaps...
+          <div className="neo-card p-10 text-center text-muted">
+            <div className="inline-block h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin mb-3" />
+            <p className="text-sm">Analyzing your resume and profile gaps with DeepSeek...</p>
           </div>
         ) : todos.length === 0 ? (
-          <div className="neo-raised p-8 text-center space-y-3">
-            <h3 className="text-lg font-bold text-ink">No Open To-Dos</h3>
-            <p className="text-sm text-muted">
-              Your profile meets front-face standards. Proceeding to connect mailbox...
+          <div className="neo-card p-10 text-center space-y-4">
+            <div className="inline-flex h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 items-center justify-center text-xl font-bold mb-1">
+              ✓
+            </div>
+            <h3 className="text-xl font-bold text-ink">Zero Open To-Dos</h3>
+            <p className="text-xs text-muted max-w-md mx-auto">
+              Your profile satisfies all front-face standards and your readiness score allows automated job scouting and recruiter outreach.
             </p>
             <button
               onClick={() => window.location.assign("/mailbox")}
-              className="neo-pressed px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-accent"
+              className="btn-teal px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
             >
-              Continue to Mailbox →
+              Continue to Mailbox Connection →
             </button>
           </div>
         ) : (
           <div className="space-y-4">
             {todos.map((item) => (
-              <div key={item.id} className="neo-raised p-6 space-y-4">
+              <div key={item.id} className="neo-card-interactive p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <span
-                    className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${
+                    className={
                       item.severity === "critical"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-amber-100 text-amber-800"
-                    }`}
+                        ? "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase bg-rose-100 text-rose-800 border border-rose-300"
+                        : "badge-bronze uppercase"
+                    }
                   >
-                    {item.severity} • {item.category}
+                    <span>{item.severity === "critical" ? "⚠️" : "💡"}</span>
+                    <span>{item.severity} • {item.category}</span>
                   </span>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-ink text-base">{item.issue_text}</h4>
-                  <p className="text-xs text-muted mt-1">{item.why_it_matters}</p>
+                  <h4 className="font-bold text-ink text-base tracking-tight">{item.issue_text}</h4>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">{item.why_it_matters}</p>
                 </div>
 
-                <div className="neo-inset p-4">
-                  <span className="text-xs font-semibold text-muted block mb-1">
-                    Recommended Fix:
+                <div className="neo-inset p-4 rounded-xl border border-slate-200/50">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 block mb-1">
+                    AI Suggested Fix:
                   </span>
-                  <p className="text-sm text-ink font-mono">{item.fix_draft}</p>
+                  <p className="text-xs text-ink font-mono bg-white/40 p-2.5 rounded-lg border border-slate-200/30">
+                    {item.fix_draft}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">
@@ -179,7 +212,7 @@ export default function TodosPage() {
                     type="button"
                     disabled={actionLoading === item.id}
                     onClick={() => handleAction(item.id, "dismiss")}
-                    className="neo-raised px-4 py-2 text-xs font-medium text-muted hover:text-red-600 transition-colors disabled:opacity-50"
+                    className="neo-raised px-4 py-2 text-xs font-medium text-muted hover:text-rose-600 transition-colors disabled:opacity-50"
                   >
                     Dismiss (Caps score at 69)
                   </button>
@@ -187,9 +220,9 @@ export default function TodosPage() {
                     type="button"
                     disabled={actionLoading === item.id}
                     onClick={() => handleAction(item.id, "accept")}
-                    className="neo-pressed px-5 py-2 text-xs font-bold text-accent uppercase tracking-wider disabled:opacity-50"
+                    className="btn-teal px-6 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
                   >
-                    {actionLoading === item.id ? "Applying..." : "Accept Fix"}
+                    {actionLoading === item.id ? "Applying Fix..." : "Accept Fix ✓"}
                   </button>
                 </div>
               </div>
