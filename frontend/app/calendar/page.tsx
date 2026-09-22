@@ -61,7 +61,7 @@ export default function CalendarPage() {
 
   return (
     <Shell title="Interview Calendar">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <div className="neo-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">

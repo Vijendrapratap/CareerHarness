@@ -56,12 +56,13 @@ export default function MailboxPage() {
 
   return (
     <Shell title="Connect Mailbox">
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="neo-card p-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Form Card (7 cols) */}
+        <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold tracking-wider text-teal-800">
-                Step 3: Mailbox Connection
+              <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">
+                Mailbox Integration
               </span>
               <span className="badge-emerald text-[10px] py-0.5 px-2">
                 AES-256 Envelope Encrypted
@@ -69,7 +70,7 @@ export default function MailboxPage() {
             </div>
             <h2 className="text-xl font-bold text-ink tracking-tight">Connect Your Application Mailbox</h2>
             <p className="text-xs text-muted leading-relaxed">
-              The autonomous hunter sends emails from this mailbox only after you review and approve each message packet.
+              The autonomous hunter sends application emails from this mailbox only after you review and approve each message packet in your dashboard.
             </p>
           </div>
 
@@ -147,6 +148,42 @@ export default function MailboxPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Security & Safeguards Card (5 cols) */}
+        <div className="lg:col-span-5 space-y-5">
+          <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-gradient-to-br from-white/90 to-teal-50/20">
+            <div className="flex items-center gap-2">
+              <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Safety Mandate</span>
+              <h3 className="text-xs font-bold text-ink uppercase tracking-wider">Human-in-the-Loop Protocol</h3>
+            </div>
+            <div className="space-y-3 text-xs text-muted">
+              <div className="p-3.5 rounded-xl neo-inset bg-white/60 space-y-1">
+                <p className="font-bold text-ink flex items-center gap-1.5">
+                  <span>🛡️</span> Zero Unapproved Outbound
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  CareerHarness will never send cold outreach or job applications autonomously without your explicit click on the Front-Face dashboard.
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl neo-inset bg-white/60 space-y-1">
+                <p className="font-bold text-ink flex items-center gap-1.5">
+                  <span>🔐</span> Envelope Encryption
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Tokens are stored using AES-256-GCM symmetric encryption with rotating key derivation. Decrypted strictly within local process memory.
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl neo-inset bg-white/60 space-y-1">
+                <p className="font-bold text-ink flex items-center gap-1.5">
+                  <span>📥</span> Inbound Reply Syncing
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Replies from recruiters automatically populate the Recruiter Inbox so you never miss an interview invite or technical screening.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Shell>

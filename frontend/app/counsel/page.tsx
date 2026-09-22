@@ -690,127 +690,187 @@ export default function CounselPage() {
         {/* SCREEN 1: UPLOAD RESUME (VERY FIRST THING)                            */}
         {/* ==================================================================== */}
         {currentStage === "resume" && (
-          <div className="max-w-2xl mx-auto neo-card p-8 space-y-6 animate-chat-in">
-            <div className="text-center space-y-2">
-              <div className="inline-flex h-16 w-16 rounded-2xl bg-teal-100 text-teal-700 items-center justify-center text-3xl shadow-inner mx-auto">
-                📄
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-chat-in">
+            {/* Primary Action Card (7 cols) */}
+            <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                    📄
+                  </div>
+                  <div>
+                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Step 1 of 4</span>
+                    <h3 className="text-xl font-bold text-ink">Upload Your Resume</h3>
+                  </div>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  Start by uploading your current CV or resume in PDF format. DeepSeek AI parses and
+                  extracts verified technical competencies, production scope, and quantifiable metrics.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-ink">Upload Your Resume</h3>
-              <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
-                Start by uploading your current CV or resume in PDF format. DeepSeek will parse and
-                extract your verified technical skills, project scopes, and metrics.
-              </p>
-            </div>
 
-            {/* Dropzone */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (!uploadingResume) setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDragging(false);
-                if (!uploadingResume && e.dataTransfer.files?.[0]) {
-                  processResumeFile(e.dataTransfer.files[0]);
-                }
-              }}
-              className={`p-8 rounded-2xl border-2 border-dashed transition-all duration-200 text-center space-y-4 ${
-                isDragging
-                  ? "border-teal-500 bg-teal-50/80 scale-[1.01]"
-                  : uploadedResume
-                  ? "border-emerald-400 bg-emerald-50/20"
-                  : "border-slate-300 hover:border-teal-400 bg-slate-50/40"
-              }`}
-            >
-              <input
-                type="file"
-                id="resume-file-input"
-                accept=".pdf,application/pdf"
-                onChange={handleResumeChange}
-                disabled={uploadingResume}
-                className="hidden"
-              />
+              {/* Dropzone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!uploadingResume) setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (!uploadingResume && e.dataTransfer.files?.[0]) {
+                    processResumeFile(e.dataTransfer.files[0]);
+                  }
+                }}
+                className={`p-8 rounded-2xl border-2 border-dashed transition-all duration-200 text-center space-y-4 ${
+                  isDragging
+                    ? "border-teal-500 bg-teal-50/80 scale-[1.01]"
+                    : uploadedResume
+                    ? "border-emerald-400 bg-emerald-50/20"
+                    : "border-slate-300 hover:border-teal-400 bg-slate-50/40"
+                }`}
+              >
+                <input
+                  type="file"
+                  id="resume-file-input"
+                  accept=".pdf,application/pdf"
+                  onChange={handleResumeChange}
+                  disabled={uploadingResume}
+                  className="hidden"
+                />
 
-              {!uploadedResume && !uploadingResume && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-ink">
-                    Drag and drop your PDF resume here, or browse files
-                  </p>
-                  <label
-                    htmlFor="resume-file-input"
-                    className="btn-teal inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md hover:shadow-lg transition-all"
-                  >
-                    <span>Choose Resume PDF</span>
-                  </label>
-                  <p className="text-[11px] text-muted">PDF format only • Up to 10MB</p>
-                </div>
-              )}
-
-              {uploadingResume && (
-                <div className="p-4 rounded-xl bg-teal-50/80 border border-teal-200 flex flex-col items-center justify-center gap-2 text-teal-800">
-                  <div className="h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" />
-                  <p className="text-xs font-semibold">
-                    Extracting technical skills, project scopes, and metrics with AI...
-                  </p>
-                  <span className="text-[11px] text-teal-600">This takes just a few seconds</span>
-                </div>
-              )}
-
-              {uploadedResume && !uploadingResume && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-left flex items-start justify-between gap-3 shadow-sm">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-700 font-bold text-sm">✓</span>
-                        <span className="text-xs font-bold text-emerald-950 truncate max-w-[280px]">
-                          {uploadedResume.filename}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-emerald-800 font-medium">
-                        Successfully parsed • {uploadedResume.skillsCount} skills detected and
-                        vaulted.
-                      </p>
-                    </div>
+                {!uploadedResume && !uploadingResume && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-ink">
+                      Drag and drop your PDF resume here, or browse files
+                    </p>
                     <label
                       htmlFor="resume-file-input"
-                      className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline cursor-pointer shrink-0 py-1"
+                      className="btn-teal inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md hover:shadow-lg transition-all"
                     >
-                      Change PDF
+                      <span>Choose Resume PDF</span>
                     </label>
+                    <p className="text-[11px] text-muted">PDF format only • Up to 10MB</p>
                   </div>
+                )}
 
-                  {uploadedResume.extractedSkills.length > 0 && (
-                    <div className="text-left space-y-1.5">
-                      <span className="text-[11px] font-bold uppercase text-muted tracking-wider">
-                        Extracted Technical Skills:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {uploadedResume.extractedSkills.slice(0, 15).map((skill) => (
-                          <span
-                            key={skill}
-                            className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-teal-100/70 text-teal-900 border border-teal-200"
-                          >
-                            {skill}
+                {uploadingResume && (
+                  <div className="p-4 rounded-xl bg-teal-50/80 border border-teal-200 flex flex-col items-center justify-center gap-2 text-teal-800">
+                    <div className="h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" />
+                    <p className="text-xs font-semibold">
+                      Extracting technical skills, project scopes, and metrics with AI...
+                    </p>
+                    <span className="text-[11px] text-teal-600">This takes just a few seconds</span>
+                  </div>
+                )}
+
+                {uploadedResume && !uploadingResume && (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-left flex items-start justify-between gap-3 shadow-sm">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-700 font-bold text-sm">✓</span>
+                          <span className="text-xs font-bold text-emerald-950 truncate max-w-[280px]">
+                            {uploadedResume.filename}
                           </span>
-                        ))}
+                        </div>
+                        <p className="text-[11px] text-emerald-800 font-medium">
+                          Successfully parsed • {uploadedResume.skillsCount} skills detected and
+                          vaulted.
+                        </p>
                       </div>
+                      <label
+                        htmlFor="resume-file-input"
+                        className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline cursor-pointer shrink-0 py-1"
+                      >
+                        Change PDF
+                      </label>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {uploadedResume.extractedSkills.length > 0 && (
+                      <div className="text-left space-y-1.5">
+                        <span className="text-[11px] font-bold uppercase text-muted tracking-wider">
+                          Extracted Technical Skills:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {uploadedResume.extractedSkills.slice(0, 18).map((skill) => (
+                            <span
+                              key={skill}
+                              className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-teal-100/70 text-teal-900 border border-teal-200"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-200/60">
+                <button
+                  type="button"
+                  onClick={handleContinueFromResume}
+                  disabled={!uploadedResume || uploadingResume}
+                  className="btn-teal px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md flex items-center gap-2"
+                >
+                  <span>Continue to LinkedIn Profile →</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={handleContinueFromResume}
-                disabled={!uploadedResume || uploadingResume}
-                className="btn-teal px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md flex items-center gap-2"
-              >
-                <span>Continue to LinkedIn Profile →</span>
-              </button>
+            {/* Side Guidance & Intel (5 cols) */}
+            <div className="lg:col-span-5 space-y-5">
+              <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-gradient-to-br from-white/90 to-teal-50/20">
+                <div className="flex items-center gap-2">
+                  <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Extraction Engine</span>
+                  <span className="text-xs font-bold text-ink">What We Extract</span>
+                </div>
+                <div className="space-y-3 text-xs text-muted">
+                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
+                    <p className="font-bold text-ink flex items-center gap-1.5">
+                      <span>🛠️</span> Core Tech Stack & Systems
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Languages, frameworks, data pipelines, cloud infra, and architectural patterns.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
+                    <p className="font-bold text-ink flex items-center gap-1.5">
+                      <span>📈</span> Business Scale & Scope
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Team size, cross-functional leadership, user throughput, and production traffic.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
+                    <p className="font-bold text-ink flex items-center gap-1.5">
+                      <span>🎯</span> Quantified Impact Metrics
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Latency drops, revenue acceleration, cost savings, and feature delivery speeds.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="neo-card p-5 space-y-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted block">
+                  Candidate Privacy Guarantee
+                </span>
+                <div className="space-y-2 text-[11px] text-muted leading-relaxed">
+                  <p className="flex items-start gap-2">
+                    <span className="text-emerald-700 font-bold">🔒</span>
+                    <span>Your resume text is parsed in memory and saved to your isolated SQLite instance. Zero training data harvesting.</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-teal-700 font-bold">🔑</span>
+                    <span>All AI inference runs through your OpenRouter / OpenAI BYOK vault or configured platform gateway.</span>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -819,57 +879,101 @@ export default function CounselPage() {
         {/* SCREEN 2: ADD LINKEDIN PROFILE (SKIPPABLE)                           */}
         {/* ==================================================================== */}
         {currentStage === "linkedin" && (
-          <div className="max-w-2xl mx-auto neo-card p-8 space-y-6 animate-chat-in">
-            <div className="text-center space-y-2">
-              <div className="inline-flex h-16 w-16 rounded-2xl bg-cyan-100 text-cyan-700 items-center justify-center text-3xl shadow-inner mx-auto">
-                💼
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-chat-in">
+            {/* Primary Action Card (7 cols) */}
+            <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-cyan-100 text-cyan-800 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                    💼
+                  </div>
+                  <div>
+                    <span className="badge-cyan text-[10px] py-0.5 px-2 font-bold">Step 2 of 4 (Optional)</span>
+                    <h3 className="text-xl font-bold text-ink">Add Your LinkedIn Profile</h3>
+                  </div>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  Connect your LinkedIn profile URL or paste your summary text to calibrate public
+                  seniority benchmarks and company pedigree. If you prefer to skip, you can proceed directly.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-ink">Add Your LinkedIn Profile (Optional)</h3>
-              <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
-                Connect your LinkedIn profile URL or paste your summary text to calibrate public
-                seniority benchmarks. If you prefer to skip, you can proceed directly to target roles.
-              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
+                    LinkedIn URL or About Summary
+                  </label>
+                  <input
+                    type="text"
+                    value={linkedinInput}
+                    onChange={(e) => setLinkedinInput(e.target.value)}
+                    placeholder="https://www.linkedin.com/in/your-profile"
+                    className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 text-[11px] text-muted leading-relaxed">
+                  💡 <span className="font-semibold text-ink">Why add LinkedIn?</span> Gives Scout
+                  context on your public presence and company pedigree to craft personalized recruiter
+                  pitch angles and verify market presence.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={() => handleSaveLinkedin(true)}
+                  disabled={savingLinkedin}
+                  className="neo-raised px-6 py-2.5 text-xs font-semibold text-muted hover:text-ink rounded-xl"
+                >
+                  Skip for now →
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveLinkedin(false)}
+                  disabled={savingLinkedin}
+                  className="btn-teal px-8 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md"
+                >
+                  {savingLinkedin ? "Saving..." : "Save & Continue →"}
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                  LinkedIn URL or About Summary
-                </label>
-                <input
-                  type="text"
-                  value={linkedinInput}
-                  onChange={(e) => setLinkedinInput(e.target.value)}
-                  placeholder="https://www.linkedin.com/in/your-profile"
-                  className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
-                />
+            {/* Side Guidance & Intel (5 cols) */}
+            <div className="lg:col-span-5 space-y-5">
+              <div className="neo-card p-6 space-y-4 border border-cyan-500/20 bg-gradient-to-br from-white/90 to-cyan-50/20">
+                <div className="flex items-center gap-2">
+                  <span className="badge-cyan text-[10px] py-0.5 px-2 font-bold">Candidate Positioning</span>
+                  <span className="text-xs font-bold text-ink">Public Signal Calibration</span>
+                </div>
+                <div className="space-y-3 text-xs text-muted">
+                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
+                    <p className="font-bold text-ink flex items-center gap-1.5">
+                      <span>🌐</span> Public Pedigree & Tenure
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Calibrates organizational hierarchy, company prestige, and career progression speed.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
+                    <p className="font-bold text-ink flex items-center gap-1.5">
+                      <span>✉️</span> Recruiter Outreach Vectoring
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Scout creates high-converting outreach copy highlighting mutual connections and company backgrounds.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
+                    <p className="font-bold text-ink flex items-center gap-1.5">
+                      <span>⚡</span> 100% Optional
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      If you don't use LinkedIn or prefer not to share, skip with no penalty. Your resume is sufficient.
+                    </p>
+                  </div>
+                </div>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 text-[11px] text-muted leading-relaxed">
-                💡 <span className="font-semibold text-ink">Why add LinkedIn?</span> Gives Scout
-                context on your public presence and company pedigree to craft personalized recruiter
-                pitch angles.
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
-              <button
-                type="button"
-                onClick={() => handleSaveLinkedin(true)}
-                disabled={savingLinkedin}
-                className="neo-raised px-6 py-2.5 text-xs font-semibold text-muted hover:text-ink rounded-xl"
-              >
-                Skip for now →
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSaveLinkedin(false)}
-                disabled={savingLinkedin}
-                className="btn-teal px-8 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md"
-              >
-                {savingLinkedin ? "Saving..." : "Save & Continue →"}
-              </button>
             </div>
           </div>
         )}
@@ -878,177 +982,237 @@ export default function CounselPage() {
         {/* SCREEN 3: TARGET MARKET ROLES (SEARCH BAR + DROPDOWN, MAX 3)         */}
         {/* ==================================================================== */}
         {currentStage === "target_jobs" && (
-          <div className="max-w-2xl mx-auto neo-card p-8 space-y-6 animate-chat-in">
-            <div className="text-center space-y-2">
-              <div className="inline-flex h-16 w-16 rounded-2xl bg-teal-100 text-teal-800 items-center justify-center text-3xl shadow-inner mx-auto">
-                🎯
-              </div>
-              <h3 className="text-xl font-bold text-ink">What kind of job are you looking for?</h3>
-              <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
-                Search market roles below and select <strong>up to 3 jobs</strong> you are targeting.
-                Your top selection will be designated as your #1 Priority Role (1.5× Scout search
-                weighting).
-              </p>
-            </div>
-
-            {/* Selected Roles Tray */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold uppercase tracking-wider text-muted">
-                  Selected Target Roles ({selectedRoleIds.length}/3 max)
-                </span>
-                {selectedRoleIds.length === 3 && (
-                  <span className="badge-bronze text-[10px] py-0.5 px-2">Slot Maximum Reached</span>
-                )}
-              </div>
-
-              {selectedRoleIds.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-muted">
-                  No roles selected yet. Use the search bar below to add up to 3 market roles.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-chat-in">
+            {/* Primary Search & Selection Card (7 cols) */}
+            <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                    🎯
+                  </div>
+                  <div>
+                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Step 3 of 4</span>
+                    <h3 className="text-xl font-bold text-ink">What kind of job are you looking for?</h3>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedRoleIds.map((roleId, idx) => {
-                    const catalogMatch = catalogRoles.find((r) => r.id === roleId);
-                    const title =
-                      catalogMatch?.title ||
-                      roleId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                    const isPriority = idx === 0;
+                <p className="text-xs text-muted leading-relaxed">
+                  Search market roles below and select <strong>up to 3 target jobs</strong>. Your top selection will be designated as your #1 Priority Role (1.5× Scout search weighting).
+                </p>
+              </div>
 
-                    return (
-                      <div
-                        key={roleId}
-                        className={`p-3 rounded-xl flex items-center justify-between border transition-all ${
-                          isPriority
-                            ? "bg-teal-50/80 border-teal-400/80 shadow-sm"
-                            : "bg-slate-50 border-slate-200"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {isPriority ? (
-                            <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">
-                              ⭐ #1 Priority (1.5× Weight)
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleMakePriority(roleId)}
-                              className="text-[10px] text-muted hover:text-teal-700 underline font-medium"
-                            >
-                              Make Priority #1
-                            </button>
-                          )}
-                          <span className="text-xs font-bold text-ink">{title}</span>
-                          {catalogMatch?.family && (
-                            <span className="text-[10px] text-muted">({catalogMatch.family})</span>
-                          )}
-                        </div>
+              {/* Search Bar + Live Dropdown */}
+              <div className="space-y-2 relative">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
+                  Search Roles in Market:
+                </label>
 
+                <div className="relative">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={roleSearchQuery}
+                    onFocus={() => setIsRoleDropdownOpen(true)}
+                    onChange={(e) => {
+                      setRoleSearchQuery(e.target.value);
+                      setIsRoleDropdownOpen(true);
+                    }}
+                    placeholder="Type to search roles (e.g. Backend, Full Stack, AI, Manager)..."
+                    className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                  />
+
+                  {roleSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRoleSearchQuery("");
+                        setIsRoleDropdownOpen(false);
+                      }}
+                      className="absolute right-3 top-3 text-xs text-muted hover:text-ink"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown Menu */}
+                {isRoleDropdownOpen && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto neo-raised bg-white rounded-xl shadow-xl border border-slate-200 divide-y divide-slate-100">
+                    {filteredRoles.map((r) => {
+                      const isSelected = selectedRoleIds.includes(r.id);
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => handleSelectRole(r.id)}
+                          disabled={isSelected || selectedRoleIds.length >= 3}
+                          className={`w-full px-4 py-2.5 text-left text-xs flex items-center justify-between hover:bg-teal-50/60 transition-all ${
+                            isSelected ? "opacity-50 bg-slate-50 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          <div>
+                            <p className="font-bold text-ink">{r.title}</p>
+                            <p className="text-[10px] text-muted">{r.family}</p>
+                          </div>
+                          <span className="text-[11px] font-semibold text-teal-700">
+                            {isSelected ? "Selected ✓" : "+ Add"}
+                          </span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Add Custom Title if typed */}
+                    {roleSearchQuery.trim() &&
+                      !catalogRoles.some(
+                        (r) => r.title.toLowerCase() === roleSearchQuery.trim().toLowerCase()
+                      ) && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveRole(roleId)}
-                          className="text-xs text-rose-600 hover:text-rose-800 font-bold px-2 py-1 rounded-md"
-                          title="Remove role"
+                          onClick={() => handleSelectRole(roleSearchQuery.trim())}
+                          disabled={selectedRoleIds.length >= 3}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-teal-800 bg-teal-50/80 hover:bg-teal-100 flex items-center justify-between"
                         >
-                          ✕
+                          <span>+ Add custom role: &quot;{roleSearchQuery.trim()}&quot;</span>
+                          <span className="text-[10px] uppercase font-bold text-teal-900">Custom</span>
                         </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Search Bar + Live Dropdown */}
-            <div className="space-y-2 relative">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
-                Search Roles in Market:
-              </label>
-
-              <div className="relative">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={roleSearchQuery}
-                  onFocus={() => setIsRoleDropdownOpen(true)}
-                  onChange={(e) => {
-                    setRoleSearchQuery(e.target.value);
-                    setIsRoleDropdownOpen(true);
-                  }}
-                  placeholder="Type to search roles (e.g. Backend, Full Stack, AI, Manager)..."
-                  className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
-                />
-
-                {roleSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRoleSearchQuery("");
-                      setIsRoleDropdownOpen(false);
-                    }}
-                    className="absolute right-3 top-3 text-xs text-muted hover:text-ink"
-                  >
-                    ✕
-                  </button>
+                      )}
+                  </div>
                 )}
               </div>
 
-              {/* Dropdown Menu */}
-              {isRoleDropdownOpen && (
-                <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto neo-raised bg-white rounded-xl shadow-xl border border-slate-200 divide-y divide-slate-100">
-                  {filteredRoles.map((r) => {
-                    const isSelected = selectedRoleIds.includes(r.id);
+              {/* Quick Popular Suggestions */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                  Popular In-Demand Tech Roles:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "Staff Backend Engineer",
+                    "Full Stack Engineer",
+                    "Senior Software Engineer",
+                    "AI Systems Engineer",
+                    "Engineering Manager",
+                    "Platform / DevOps Engineer",
+                  ].map((preset) => {
+                    const matched = catalogRoles.find(
+                      (r) => r.title.toLowerCase() === preset.toLowerCase()
+                    );
+                    const roleId = matched ? matched.id : preset;
+                    const isSelected = selectedRoleIds.includes(roleId);
                     return (
                       <button
-                        key={r.id}
+                        key={preset}
                         type="button"
-                        onClick={() => handleSelectRole(r.id)}
+                        onClick={() => handleSelectRole(roleId)}
                         disabled={isSelected || selectedRoleIds.length >= 3}
-                        className={`w-full px-4 py-2.5 text-left text-xs flex items-center justify-between hover:bg-teal-50/60 transition-all ${
-                          isSelected ? "opacity-50 bg-slate-50 cursor-not-allowed" : ""
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                          isSelected
+                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold opacity-60"
+                            : "neo-raised text-ink hover:text-teal-700"
                         }`}
                       >
-                        <div>
-                          <p className="font-bold text-ink">{r.title}</p>
-                          <p className="text-[10px] text-muted">{r.family}</p>
-                        </div>
-                        <span className="text-[11px] font-semibold text-teal-700">
-                          {isSelected ? "Selected ✓" : "+ Add"}
-                        </span>
+                        {isSelected ? `✓ ${preset}` : `+ ${preset}`}
                       </button>
                     );
                   })}
-
-                  {/* Add Custom Title if typed */}
-                  {roleSearchQuery.trim() &&
-                    !catalogRoles.some(
-                      (r) => r.title.toLowerCase() === roleSearchQuery.trim().toLowerCase()
-                    ) && (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectRole(roleSearchQuery.trim())}
-                        disabled={selectedRoleIds.length >= 3}
-                        className="w-full px-4 py-2.5 text-left text-xs font-bold text-teal-800 bg-teal-50/80 hover:bg-teal-100 flex items-center justify-between"
-                      >
-                        <span>+ Add custom role: &quot;{roleSearchQuery.trim()}&quot;</span>
-                        <span className="text-[10px] uppercase font-bold text-teal-900">Custom</span>
-                      </button>
-                    )}
                 </div>
-              )}
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={handleSaveTargetRoles}
+                  disabled={selectedRoleIds.length === 0 || savingRoles}
+                  className="btn-teal px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md flex items-center gap-2"
+                >
+                  <span>
+                    {savingRoles ? "Saving Target Roles..." : "Proceed to Job Matches & Preferences →"}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-200/80">
-              <button
-                type="button"
-                onClick={handleSaveTargetRoles}
-                disabled={selectedRoleIds.length === 0 || savingRoles}
-                className="btn-teal px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md flex items-center gap-2"
-              >
-                <span>
-                  {savingRoles ? "Saving Target Roles..." : "Proceed to Job Matches & Preferences →"}
-                </span>
-              </button>
+            {/* Selected Roles & Scout Weighting (5 cols) */}
+            <div className="lg:col-span-5 space-y-5">
+              <div className="neo-card p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Selected</span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+                      Target Roles ({selectedRoleIds.length}/3 max)
+                    </h4>
+                  </div>
+                  {selectedRoleIds.length === 3 && (
+                    <span className="badge-bronze text-[10px] py-0.5 px-2">Slot Max</span>
+                  )}
+                </div>
+
+                {selectedRoleIds.length === 0 ? (
+                  <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-muted space-y-2">
+                    <p className="text-xl">🎯</p>
+                    <p>No roles selected yet.</p>
+                    <p className="text-[11px]">Use the search bar or popular chips on the left to add up to 3 market roles.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedRoleIds.map((roleId, idx) => {
+                      const catalogMatch = catalogRoles.find((r) => r.id === roleId);
+                      const title =
+                        catalogMatch?.title ||
+                        roleId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                      const isPriority = idx === 0;
+
+                      return (
+                        <div
+                          key={roleId}
+                          className={`p-3.5 rounded-xl flex items-center justify-between border transition-all ${
+                            isPriority
+                              ? "bg-teal-50/80 border-teal-400/80 shadow-sm"
+                              : "bg-slate-50 border-slate-200"
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {isPriority ? (
+                                <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">
+                                  ⭐ #1 Priority (1.5× Weight)
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMakePriority(roleId)}
+                                  className="text-[10px] text-muted hover:text-teal-700 underline font-medium"
+                                >
+                                  Make Priority #1
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-xs font-bold text-ink">{title}</p>
+                            {catalogMatch?.family && (
+                              <p className="text-[10px] text-muted">{catalogMatch.family}</p>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRole(roleId)}
+                            className="text-xs text-rose-600 hover:text-rose-800 font-bold px-2 py-1 rounded-md"
+                            title="Remove role"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="p-3.5 rounded-xl neo-inset bg-slate-50/60 text-[11px] text-muted leading-relaxed space-y-1 border border-slate-200/60">
+                  <p className="font-semibold text-ink">⚡ Scout Search Weighting:</p>
+                  <p>
+                    Your #1 priority role directs 60% of autonomous ATS scrapers and auto-tailors your primary CV. Secondary roles receive opportunistic coverage.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

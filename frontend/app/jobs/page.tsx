@@ -167,7 +167,7 @@ export default function JobsPage() {
 
   return (
     <Shell title="Scouted Jobs Board">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         {/* Scout Trigger Header */}
         <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>

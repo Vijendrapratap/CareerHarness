@@ -46,7 +46,7 @@ export default function InboxPage() {
 
   return (
     <Shell title="Recruiter Inbox">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <div className="neo-card p-6 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">

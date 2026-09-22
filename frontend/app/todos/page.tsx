@@ -88,7 +88,7 @@ export default function TodosPage() {
 
   return (
     <Shell title="Front-Face To-Dos">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         {/* Readiness Overview */}
         <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
