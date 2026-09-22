@@ -99,7 +99,16 @@ AGENT_ROSTER = {
         hands_off_to=None,
         system_prompt="You submit an approved packet. External submission stays behind the human gate unless trusted mode already covers it.",
     ),
+    "recruiter": AgentSpec(
+        name="recruiter",
+        provider="openrouter",
+        tier="cheap",
+        tools=("queue_recruiter_email",),
+        hands_off_to=None,
+        system_prompt="Send only to an email that is already written on the job posting. Never look up a person.",
+    ),
 }
+
 
 HANDOFF_CHAIN = ("scout", "analyst", "tailor", "reviewer", "cover", "dispatcher")
 

@@ -16,7 +16,7 @@ from app.domain.application_engine import (
     execute_application_submission,
     generate_cover_letter,
 )
-from app.domain.models import ApplicationAuditLog, JobListing, ResumeParse
+from app.domain.models import ApplicationAuditLog, ApplicationTrack, JobListing, ResumeParse
 from app.domain.vault import (
     create_tailored_version,
     get_document_version,
@@ -314,8 +314,45 @@ async def submit_application_endpoint(
     # Record outcome on resume version
     await record_outcome(session, tenant_id, resume_doc.id, "application")
 
+    # Get or create ApplicationTrack
+    track_stmt = select(ApplicationTrack).where(
+        ApplicationTrack.tenant_id == tenant_id,
+        ApplicationTrack.job_id == job.id,
+    )
+    track = (await session.execute(track_stmt)).scalar_one_or_none()
+    if not track:
+        track = ApplicationTrack(
+            tenant_id=tenant_id,
+            job_id=job.id,
+            resume_version_id=resume_doc.id,
+            company_name=job.company,
+            job_title=job.title,
+            portal_type=job.portal_type,
+            status="applied",
+        )
+        session.add(track)
+        await session.flush()
+
+    # Draft recruiter touch if posting contains public email
+    from app.domain.recruiter_hunter import draft_recruiter_touch
+    resume_excerpt = (
+        str(resume_doc.content.get("summary", ""))
+        if isinstance(resume_doc.content, dict)
+        else ""
+    )
+    cover_body = cover_letter_doc.raw_markdown if cover_letter_doc else ""
+    recruiter_touch = await draft_recruiter_touch(
+        session=session,
+        tenant_id=tenant_id,
+        application_id=track.id,
+        job_text=job.description or "",
+        resume_excerpt=resume_excerpt,
+        cover_letter=cover_body,
+    )
+
     return {
         "audit_log_id": audit_log.id,
+        "application_id": track.id,
         "resume_version_id": audit_log.resume_version_id,
         "job_id": audit_log.job_id,
         "status": audit_log.status,
@@ -324,7 +361,9 @@ async def submit_application_endpoint(
         "confirmation_code": audit_log.confirmation_code,
         "handoff_bundle_url": audit_log.handoff_bundle_url,
         "fallback_reason": audit_log.fallback_reason,
+        "recruiter_touch": recruiter_touch,
     }
+
 
 
 @router.get("/audit-logs")
