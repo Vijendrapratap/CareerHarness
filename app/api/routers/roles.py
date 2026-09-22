@@ -32,6 +32,12 @@ async def get_role_catalog():
     return roles_service.get_catalog()
 
 
+@router.get("/suggest")
+async def suggest_roles(background: str, mgmt_experience: bool = False):
+    """Returns two or three roles that match a background, plus a leadership slot when earned."""
+    return roles_service.suggest_roles(background, mgmt_experience=mgmt_experience)
+
+
 @router.get("", response_model=List[RoleItemResponse])
 async def get_selected_roles(
     tenant_id: str = Depends(get_tenant_id),

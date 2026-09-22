@@ -12,6 +12,7 @@ from app.harness.checkpointer import checkpointer
 from app.harness.gate import gate
 from app.harness.pipeline import guarded_pipeline
 from app.harness.registry import registry
+from app.harness.roster import AGENT_ROSTER, tool_schemas_for
 from app.harness.run import AgentAction, RunContext
 
 
@@ -80,27 +81,49 @@ class AgentLoop:
             return run
 
         # 2. ACT: Select and dispatch action
+        spec = AGENT_ROSTER.get(run.agent_name)
+        rejected_tool = None
         if action_override:
             action = action_override
         else:
             try:
-                # Include reflections in system prompt if previous step needed correction
-                system_prompt = f"You are agent '{run.agent_name}'. Goal: {run.goal}"
+                system_prompt = (
+                    spec.system_prompt
+                    if spec
+                    else f"You are agent '{run.agent_name}'. Goal: {run.goal}"
+                )
+                system_prompt = f"{system_prompt} Goal: {run.goal}"
                 if run.reflections and run.reflections[-1].get("needs_correction"):
                     system_prompt += f" SYSTEM CORRECTION: {run.reflections[-1].get('correction_reason')}"
 
-                _ = await router.call(
+                response = await router.call(
                     provider=provider,
                     raw_key=raw_key,
-                    tier=run.tier,  # type: ignore
+                    tier=(spec.tier if spec else run.tier),  # type: ignore
                     system_prompt=system_prompt,
                     messages=[{"role": "user", "content": f"Context: {ctx}"}],
+                    tools=tool_schemas_for(spec.tools) if spec else None,
                 )
-                action = AgentAction(
-                    tool_name="blackboard_read",
-                    arguments={"view_spec": ["profile", "roles"]},
-                    external=False,
-                )
+                tool_calls = getattr(response, "tool_calls", None) or []
+                if spec and tool_calls and tool_calls[0].name not in spec.tools:
+                    rejected_tool = tool_calls[0]
+                    action = None
+                elif tool_calls:
+                    call = tool_calls[0]
+                    meta = registry.get(call.name).meta
+                    match_score = call.arguments.get("match_score") if isinstance(call.arguments, dict) else None
+                    action = AgentAction(
+                        tool_name=call.name,
+                        arguments=call.arguments,
+                        external=meta.external,
+                        match_score=match_score,
+                    )
+                else:
+                    action = AgentAction(
+                        tool_name="blackboard_read",
+                        arguments={"view_spec": ["profile", "roles"]},
+                        external=False,
+                    )
             except KeyExhaustedError as e:
                 # BYOK quota exhausted: fail closed, mark key no_credits, park run, zero platform fallback
                 await keyvault.handle_key_failure(
@@ -120,6 +143,30 @@ class AgentLoop:
                 )
                 await checkpointer.save_checkpoint(session=session, run=run)
                 return run
+
+        if rejected_tool is not None:
+            reason = f"Tool {rejected_tool.name} is outside the {run.agent_name} allowlist."
+            obs = {
+                "step_index": run.step_index,
+                "tool_name": rejected_tool.name,
+                "arguments": rejected_tool.arguments,
+                "output": reason,
+                "status": "error",
+            }
+            run.add_observation(obs)
+            run.add_reflection(
+                {
+                    "step_index": run.step_index,
+                    "tool_name": rejected_tool.name,
+                    "success": False,
+                    "needs_correction": True,
+                    "correction_reason": reason,
+                    "next_action": "retry",
+                }
+            )
+            run.record_step(tool_name=rejected_tool.name, args=rejected_tool.arguments, output=reason)
+            await checkpointer.save_checkpoint(session=session, run=run)
+            return run
 
         # Tool registry check
         tool = registry.get(action.tool_name)

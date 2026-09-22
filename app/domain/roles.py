@@ -56,6 +56,38 @@ DEFAULT_ROLE_CATALOG: List[Dict[str, Any]] = [
         "baseline_skills": ["Product Strategy", "User Research", "Agile", "Analytics", "Stakeholder Management"],
         "is_leadership": True,
     },
+    {
+        "id": "role_ai_engineer",
+        "title": "AI Engineer",
+        "family": "Data",
+        "aliases": ["ai engineer", "applied ai", "llm engineer"],
+        "baseline_skills": ["Python", "PyTorch", "LLMs", "Evaluation"],
+        "is_leadership": False,
+    },
+    {
+        "id": "role_ml_engineer",
+        "title": "Machine Learning Engineer",
+        "family": "Data",
+        "aliases": ["machine learning engineer", "data science", "ml engineer"],
+        "baseline_skills": ["Python", "PyTorch", "Machine Learning", "Feature Stores"],
+        "is_leadership": False,
+    },
+    {
+        "id": "role_data_engineer",
+        "title": "Data Engineer",
+        "family": "Data",
+        "aliases": ["data engineer", "analytics engineer"],
+        "baseline_skills": ["SQL", "Spark", "Pipelines", "Warehousing"],
+        "is_leadership": False,
+    },
+    {
+        "id": "role_data_lead",
+        "title": "Data Science Manager",
+        "family": "Data",
+        "aliases": ["head of data", "data science manager"],
+        "baseline_skills": ["People Leadership", "Roadmap Planning", "ML Strategy"],
+        "is_leadership": True,
+    },
 ]
 
 
@@ -146,6 +178,51 @@ class RoleService:
         )
         result = await session.execute(query)
         return list(result.scalars().all())
+
+    @staticmethod
+    def suggest_roles(background: str, mgmt_experience: bool = False) -> List[Dict[str, Any]]:
+        """Offers up to three roles that match the candidate's background.
+
+        Management experience unlocks one extra leadership role in the same family.
+        """
+        text = background.lower()
+        catalog = RoleService.get_catalog()
+        ic_roles = [role for role in catalog if not role["is_leadership"]]
+
+        def score(role: Dict[str, Any]) -> int:
+            total = 0
+            alias_text = " ".join(role.get("aliases", [])).lower()
+            phrases = [role["title"], role["family"], *role.get("aliases", []), *role.get("baseline_skills", [])]
+            for phrase in phrases:
+                token = phrase.lower().strip()
+                if len(token) < 4 or token not in text:
+                    continue
+                total += 3 if token in role["title"].lower() or token in alias_text else 1
+            return total
+
+        positive = [role for role in ic_roles if score(role) > 0]
+        positive.sort(key=score, reverse=True)
+        if not positive:
+            picked = [role for role in ic_roles if role["family"] == "Engineering"][:3]
+        else:
+            picked = positive[:3]
+            family = picked[0]["family"]
+            if len(picked) < 3:
+                for role in ic_roles:
+                    if role["family"] == family and role not in picked:
+                        picked.append(role)
+                    if len(picked) == 3:
+                        break
+
+        if mgmt_experience and picked:
+            family = picked[0]["family"]
+            lead = next(
+                (role for role in catalog if role["is_leadership"] and role["family"] == family),
+                None,
+            )
+            if lead is not None:
+                picked.append(lead)
+        return picked
 
 
 roles_service = RoleService()

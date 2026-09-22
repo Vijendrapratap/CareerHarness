@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Check,
   CheckCircle,
@@ -18,6 +18,15 @@ interface KeyRecord {
   maskedPreview: string;
   status: "valid" | "no_credits" | "invalid";
   lastValidated: string;
+}
+
+interface AgentSpec {
+  name: string;
+  provider: string;
+  tier: string;
+  model: string;
+  tools: string[];
+  hands_off_to: string | null;
 }
 
 interface SettingsViewProps {
@@ -51,6 +60,22 @@ export function SettingsView({ trustedMode, setTrustedMode }: SettingsViewProps)
   const [newKey, setNewKey] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [agents, setAgents] = useState<AgentSpec[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/runs/agents")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: AgentSpec[]) => {
+        if (!cancelled && Array.isArray(data)) setAgents(data);
+      })
+      .catch(() => {
+        if (!cancelled) setAgents([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSaveKey = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +218,33 @@ export function SettingsView({ trustedMode, setTrustedMode }: SettingsViewProps)
             <p className="text-xs text-sky-400 font-mono mt-1">{feedback}</p>
           )}
         </form>
+      </div>
+
+      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
+        <div>
+          <h3 className="font-bold text-white text-base">OpenRouter agents</h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Every agent runs on the candidate&apos;s OpenRouter key. The reviewer uses the frontier DeepSeek model. A tool outside an agent&apos;s list is refused.
+          </p>
+        </div>
+        {agents.length === 0 ? (
+          <p className="text-xs text-slate-500">Agent roster appears when the API is running.</p>
+        ) : (
+          <div className="space-y-2">
+            {agents.map((agent) => (
+              <div
+                key={agent.name}
+                className="p-3 rounded-lg bg-slate-800/60 border border-slate-700/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"
+              >
+                <div>
+                  <span className="font-semibold text-white text-sm">{agent.name}</span>
+                  <span className="ml-2 text-[10px] uppercase tracking-wider text-sky-400">{agent.tier}</span>
+                </div>
+                <span className="text-xs font-mono text-slate-400">{agent.model}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 2. Trusted Mode (D5 Autonomy) */}

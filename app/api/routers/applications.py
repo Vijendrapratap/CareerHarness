@@ -8,13 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
+from app.core.keyvault import KeyInactiveError, KeyNotFoundError, keyvault
 from app.domain.application_engine import (
     answer_screening_questions,
     check_ats_compatibility,
+    draft_application_packet,
     execute_application_submission,
     generate_cover_letter,
-    review_tailored_honesty,
-    tailor_resume,
 )
 from app.domain.models import ApplicationAuditLog, JobListing, ResumeParse
 from app.domain.vault import (
@@ -103,13 +103,24 @@ async def tailor_application_endpoint(
     if not verified_skills:
         verified_skills = parent_doc.content.get("skills", [])
 
-    # Stage 1: Tailor
-    tailored = tailor_resume(parent_doc.content, job, verified_skills)
+    raw_key = None
+    try:
+        raw_key = await keyvault.get_decrypted_key(session, tenant_id, "openrouter")
+    except (KeyNotFoundError, KeyInactiveError):
+        raw_key = None
 
-    # Stage 2: Reviewer sub-agent honesty check
-    review = review_tailored_honesty(parent_doc.content, tailored, verified_skills)
+    packet = await draft_application_packet(
+        tenant_id=tenant_id,
+        master_content=parent_doc.content,
+        job=job,
+        verified_skills=verified_skills,
+        raw_key=raw_key,
+    )
+    tailored = packet["tailored_resume"]
+    review = packet["honesty_review"]
 
     vault_version_id = None
+    cover_version_id = None
     if req.save_to_vault and review["is_honest"]:
         child_doc = await create_tailored_version(
             session=session,
@@ -124,14 +135,32 @@ async def tailor_application_endpoint(
                 "target_company": job.company,
                 "target_title": job.title,
                 "injected_keywords": tailored.get("tailored_keywords_injected", []),
+                "draft_source": packet["draft_source"],
             },
         )
         vault_version_id = child_doc.id
+        if packet["cover_letter"]:
+            cover_doc = await create_tailored_version(
+                session=session,
+                tenant_id=tenant_id,
+                parent_version_id=parent_doc.id,
+                target_job_id=job.id,
+                target_role_id=None,
+                title=packet["cover_letter"]["title"],
+                content=packet["cover_letter"],
+                raw_markdown=packet["cover_letter"]["body_text"],
+                diff_summary={"draft_source": packet["draft_source"]},
+                document_type="cover_letter",
+            )
+            cover_version_id = cover_doc.id
 
     return {
         "tailored_resume": tailored,
         "honesty_review": review,
+        "cover_letter": packet["cover_letter"],
+        "draft_source": packet["draft_source"],
         "vault_version_id": vault_version_id,
+        "cover_letter_version_id": cover_version_id,
     }
 
 

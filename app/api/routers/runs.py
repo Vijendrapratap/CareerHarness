@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
+from app.core.model_router import router as model_router
 from app.domain.models import Run
 from app.domain.schemas import (
     ApprovalResolveRequest,
@@ -13,8 +14,29 @@ from app.domain.schemas import (
     RunResponse,
 )
 from app.harness.gate import gate
+from app.harness.roster import AGENT_ROSTER, HANDOFF_CHAIN
 
 router = APIRouter(prefix="/api/runs", tags=["Runs & Approvals"])
+
+
+@router.get("/agents")
+async def list_agents():
+    """OpenRouter roster: which DeepSeek model and tools each agent is allowed to use."""
+    names = ("profiler",) + HANDOFF_CHAIN
+    specs = []
+    for name in names:
+        spec = AGENT_ROSTER[name]
+        specs.append(
+            {
+                "name": spec.name,
+                "provider": spec.provider,
+                "tier": spec.tier,
+                "model": model_router.model_for(spec.provider, spec.tier),  # type: ignore[arg-type]
+                "tools": list(spec.tools),
+                "hands_off_to": spec.hands_off_to,
+            }
+        )
+    return specs
 
 
 @router.post("", response_model=RunResponse, status_code=status.HTTP_201_CREATED)

@@ -7,6 +7,7 @@ Enforces:
 - Zero platform key fallback
 """
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional
 
@@ -41,6 +42,36 @@ class ToolCall:
     id: str
     name: str
     arguments: Dict[str, Any]
+
+
+def _coerce_tool_arguments(raw: Any) -> Dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def parse_openai_tool_calls(message: Dict[str, Any]) -> List[ToolCall]:
+    """Reads OpenAI-compatible tool calls, which is what OpenRouter returns."""
+    calls = []
+    for item in message.get("tool_calls") or []:
+        function = item.get("function") or {}
+        name = function.get("name")
+        if not name:
+            continue
+        calls.append(
+            ToolCall(
+                id=str(item.get("id") or name),
+                name=name,
+                arguments=_coerce_tool_arguments(function.get("arguments")),
+            )
+        )
+    return calls
 
 
 @dataclass
@@ -143,7 +174,7 @@ class ModelRouter:
             raise KeyExhaustedError(f"Rate limit exceeded for {provider}: 429 Too Many Requests")
 
         # If live non-demo key provided, make real network-bound call (Zero Stubs in Production)
-        if not raw_key.startswith("sk-test-") and not "demo" in raw_key and not "mock" in raw_key:
+        if not raw_key.startswith("sk-test-") and "demo" not in raw_key and "mock" not in raw_key:
             client = self._http or httpx.AsyncClient(timeout=60.0)
             url = None
             headers = {"Authorization": f"Bearer {raw_key}", "Content-Type": "application/json"}
@@ -151,6 +182,8 @@ class ModelRouter:
                 "model": model,
                 "messages": [{"role": "system", "content": system_prompt}] + messages,
             }
+            if tools:
+                payload["tools"] = tools
 
             clean_p = provider.lower().strip()
             if clean_p == "openrouter":
@@ -170,13 +203,14 @@ class ModelRouter:
                     resp.raise_for_status()
                     data = resp.json()
 
-                    content = data["choices"][0]["message"]["content"]
+                    message = data["choices"][0]["message"]
+                    content = message.get("content")
                     usage = data.get("usage", {})
                     finish_reason = data["choices"][0].get("finish_reason", "stop")
 
                     return LLMResponse(
                         content=content,
-                        tool_calls=[],
+                        tool_calls=parse_openai_tool_calls(message),
                         raw_usage={
                             "prompt_tokens": usage.get("prompt_tokens", 0),
                             "completion_tokens": usage.get("completion_tokens", 0),

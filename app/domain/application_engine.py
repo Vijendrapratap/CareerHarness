@@ -10,13 +10,17 @@ Implements the 5-stage plan template:
    Immutable application audit log creation linked to DocumentVersion (AT-07, VR-01).
 """
 
+import json
 import re
 import uuid
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.model_router import ModelRouterError, router
 from app.domain.models import ApplicationAuditLog, DocumentVersion, JobListing
+from app.harness.roster import AGENT_ROSTER
+from app.harness.teams import CareerAgentTeam
 
 
 class ApplicationPipelineError(Exception):
@@ -194,6 +198,139 @@ def generate_cover_letter(
         "recipient_company": job.company,
         "job_title": job.title,
         "body_text": body,
+    }
+
+
+def _parse_model_resume(content: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Pulls a JSON resume object out of a model reply."""
+    if not content:
+        return None
+    start = content.find("{")
+    end = content.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        data = json.loads(content[start:end + 1])
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict) or "experience" not in data:
+        return None
+    return data
+
+
+async def draft_application_packet(
+    *,
+    tenant_id: str,
+    master_content: Dict[str, Any],
+    job: Any,
+    verified_skills: List[str],
+    raw_key: Optional[str] = None,
+    provider: str = "openrouter",
+    team: Optional[CareerAgentTeam] = None,
+) -> Dict[str, Any]:
+    """Drafter proposes a resume, the honesty gate accepts or rejects it, then the cover letter is written.
+
+    The harness task board records tailor -> reviewer -> cover. A proposal that invents
+    a company, date, metric, or skill is discarded and the factual reorder is kept.
+    """
+    team = team or CareerAgentTeam()
+    tailor_spec = AGENT_ROSTER["tailor"]
+    reviewer_spec = AGENT_ROSTER["reviewer"]
+    models = {
+        "tailor": router.model_for(provider, tailor_spec.tier),  # type: ignore[arg-type]
+        "reviewer": router.model_for(provider, reviewer_spec.tier),  # type: ignore[arg-type]
+    }
+
+    tailor_task = team.handoff(
+        tenant_id=tenant_id,
+        from_role="analyst",
+        to_role="tailor",
+        task_title=f"Tailor resume for {job.company} {job.title}",
+        payload={"job_id": job.id},
+    )
+    team.board.claim_task(tailor_task.task_id, "TailorAgent")
+
+    proposed = None
+    rejected = None
+    if raw_key:
+        try:
+            response = await router.call(
+                provider=provider,
+                raw_key=raw_key,
+                tier=tailor_spec.tier,  # type: ignore[arg-type]
+                system_prompt=tailor_spec.system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {
+                                "master": master_content,
+                                "job_title": job.title,
+                                "company": job.company,
+                                "job_description": job.description,
+                                "verified_skills": verified_skills,
+                            }
+                        ),
+                    }
+                ],
+            )
+            proposed = _parse_model_resume(getattr(response, "content", None))
+        except ModelRouterError:
+            proposed = None
+
+    draft = tailor_resume(master_content, job, verified_skills)
+    source = "deterministic"
+    if proposed is not None:
+        proposed_review = review_tailored_honesty(master_content, proposed, verified_skills)
+        if proposed_review["is_honest"]:
+            draft = proposed
+            source = "openrouter"
+        else:
+            rejected = proposed_review
+
+    review = review_tailored_honesty(master_content, draft, verified_skills)
+    if not review["is_honest"]:
+        team.board.fail_task(tailor_task.task_id, "; ".join(review["violations"]))
+        return {
+            "tailored_resume": draft,
+            "honesty_review": review,
+            "cover_letter": None,
+            "draft_source": source,
+            "rejected_proposal": rejected,
+            "team": team,
+            "models": models,
+        }
+
+    team.board.complete_task(tailor_task.task_id, {"source": source})
+    reviewer_task = team.handoff(
+        tenant_id=tenant_id,
+        from_role="tailor",
+        to_role="reviewer",
+        task_title=f"Review draft for {job.company}",
+        payload={"job_id": job.id},
+    )
+    team.board.claim_task(reviewer_task.task_id, "ReviewerAgent")
+    team.board.complete_task(reviewer_task.task_id, {"honesty_verified": True})
+
+    cover = generate_cover_letter(master_content, job, draft)
+    cover_task = team.handoff(
+        tenant_id=tenant_id,
+        from_role="reviewer",
+        to_role="cover",
+        task_title=f"Cover letter for {job.company}",
+        payload={"job_id": job.id},
+    )
+    team.board.claim_task(cover_task.task_id, "CoverAgent")
+    team.board.complete_task(cover_task.task_id, {"title": cover["title"]})
+
+    return {
+        "tailored_resume": draft,
+        "honesty_review": review,
+        "cover_letter": cover,
+        "draft_source": source,
+        "rejected_proposal": rejected,
+        "team": team,
+        "models": models,
     }
 
 
