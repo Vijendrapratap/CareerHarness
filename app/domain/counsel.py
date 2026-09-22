@@ -57,8 +57,48 @@ class CounselValidationError(Exception):
     pass
 
 
+def _format_history(sections: Dict[str, ProfileSection]) -> List[Dict[str, Any]]:
+    history = []
+    for s in COUNSEL_STEPS:
+        if s in sections:
+            sec = sections[s]
+            ans_text = ""
+            if s == "linkedin":
+                ans_text = sec.body.get("raw") or sec.body.get("url_or_text", "")
+            elif s == "resume":
+                ans_text = sec.body.get("raw") or sec.body.get("resume_id_or_text", "Resume PDF Uploaded")
+            elif s == "target_work":
+                ans_text = sec.body.get("background", "")
+            elif s == "priority_role":
+                prio_id = sec.body.get("priority_role_id", "")
+                role_def = roles_service.find_role_in_catalog(prio_id)
+                ans_text = role_def["title"] if role_def else prio_id
+            elif s == "management":
+                ans_text = (
+                    "Yes, I have management experience"
+                    if sec.body.get("management")
+                    else "No management experience"
+                )
+            elif s == "location":
+                ans_text = sec.body.get("location", "")
+            elif s == "authorization":
+                ans_text = sec.body.get("authorization", "")
+            elif s == "preferences":
+                more = sec.body.get("more_of", "")
+                avoid = sec.body.get("avoid", "")
+                ans_text = f"More of: {more}" + (f" | Avoid: {avoid}" if avoid else "")
+
+            history.append({
+                "step": s,
+                "prompt": PROMPTS[s],
+                "answer": ans_text,
+                "input_mode": sec.input_mode or "text",
+            })
+    return history
+
+
 async def get_counsel_state(session: AsyncSession, tenant_id: str) -> Dict[str, Any]:
-    """Returns the current step, prompt, and choices for the next unanswered step."""
+    """Returns the current step, prompt, choices, and previous history for the candidate."""
     stmt = (
         select(ProfileSection)
         .where(ProfileSection.tenant_id == tenant_id)
@@ -66,6 +106,7 @@ async def get_counsel_state(session: AsyncSession, tenant_id: str) -> Dict[str, 
     )
     res = await session.execute(stmt)
     sections = {row.step: row for row in res.scalars().all()}
+    history = _format_history(sections)
 
     for step in COUNSEL_STEPS:
         if step not in sections:
@@ -76,6 +117,7 @@ async def get_counsel_state(session: AsyncSession, tenant_id: str) -> Dict[str, 
                 "step": step,
                 "prompt": PROMPTS[step],
                 "choices": choices,
+                "history": history,
                 "done": False,
             }
 
@@ -83,6 +125,7 @@ async def get_counsel_state(session: AsyncSession, tenant_id: str) -> Dict[str, 
         "step": None,
         "prompt": "All onboarding questions answered.",
         "choices": [],
+        "history": history,
         "done": True,
     }
 
@@ -134,17 +177,21 @@ async def record_answer(
     elif step == "priority_role":
         target_work_sec = existing_by_step.get("target_work")
         suggestions = target_work_sec.body.get("suggestions", []) if target_work_sec else []
+        mgmt_sec = existing_by_step.get("management")
+        has_mgmt = mgmt_sec.body.get("management", False) if mgmt_sec else False
+        max_allowed = 4 if has_mgmt else 3
+
         if suggestions and text not in suggestions:
-            # If not in suggestions, accept or fall back to suggestion list
-            role_ids = list(dict.fromkeys([text] + suggestions))
+            # If not in suggestions, accept or fall back to suggestion list, capped at max_allowed
+            role_ids = list(dict.fromkeys([text] + suggestions))[:max_allowed]
         else:
-            role_ids = suggestions or [text]
+            role_ids = (suggestions or [text])[:max_allowed]
 
         await roles_service.select_roles(
             session=session,
             tenant_id=tenant_id,
             role_ids=role_ids,
-            mgmt_experience=False,
+            mgmt_experience=has_mgmt,
             priority_role_id=text,
         )
         body = {
@@ -202,6 +249,10 @@ async def record_answer(
     session.add(section_row)
     await session.flush()
 
+    # Update memory of existing steps for history calculation
+    existing_by_step[step] = section_row
+    history = _format_history(existing_by_step)
+
     # If preferences is saved, unlock todos stage
     if step == "preferences":
         await set_stage(session, tenant_id, "todos")
@@ -217,6 +268,7 @@ async def record_answer(
             "step": next_step,
             "prompt": PROMPTS[next_step],
             "choices": next_choices,
+            "history": history,
             "done": False,
         }
 
@@ -224,5 +276,6 @@ async def record_answer(
         "step": None,
         "prompt": "All onboarding questions answered.",
         "choices": [],
+        "history": history,
         "done": True,
     }

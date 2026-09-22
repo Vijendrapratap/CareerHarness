@@ -13,6 +13,7 @@ from app.domain.counsel import (
     get_counsel_state,
     record_answer,
 )
+from app.domain.roles import RoleSelectionError
 
 router = APIRouter(prefix="/api/counsel", tags=["Candidate Counsellor"])
 
@@ -23,10 +24,18 @@ class CounselAnswerRequest(BaseModel):
     input_mode: Literal["text", "mic"] = "text"
 
 
+class CounselHistoryItem(BaseModel):
+    step: str
+    prompt: str
+    answer: str
+    input_mode: str = "text"
+
+
 class CounselStateResponse(BaseModel):
     step: Optional[str] = None
     prompt: str
     choices: List[Any] = []
+    history: List[CounselHistoryItem] = []
     done: bool
 
 
@@ -52,7 +61,7 @@ async def submit_counsel_answer(
             text=request.text,
             input_mode=request.input_mode,
         )
-    except CounselOrderError as e:
+    except (CounselOrderError, RoleSelectionError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),

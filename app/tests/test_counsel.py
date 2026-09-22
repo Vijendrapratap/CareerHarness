@@ -30,3 +30,17 @@ async def test_mic_answer_is_stored_as_text(db_session, sample_tenant):
         db_session, sample_tenant.id, "linkedin", "spoken profile text", "mic"
     )
     assert result["step"] == "resume"
+
+
+@pytest.mark.asyncio
+async def test_priority_role_custom_role_does_not_exceed_cap(db_session, sample_tenant):
+    await record_answer(db_session, sample_tenant.id, "linkedin", "https://linkedin.com/in/ada", "text")
+    await record_answer(db_session, sample_tenant.id, "resume", "resume-1", "text")
+    # target_work generates 3 suggestions
+    res = await record_answer(db_session, sample_tenant.id, "target_work", "senior backend engineer with python and go", "text")
+    assert res["step"] == "priority_role"
+    # Select a custom role that is NOT in suggestions
+    res_prio = await record_answer(db_session, sample_tenant.id, "priority_role", "custom_director_role", "text")
+    assert res_prio["step"] == "management"
+    assert "history" in res_prio
+    assert len(res_prio["history"]) == 4
