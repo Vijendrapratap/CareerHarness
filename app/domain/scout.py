@@ -10,18 +10,25 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.outbox import outbox
+from app.domain import sources
 from app.domain.models import JobMatch, RoleSelection, ScoutSchedule, Tenant
 from app.domain.roles import roles_service
 
 # Public job boards scanned for every candidate (verified live). Add boards here.
 DEFAULT_BOARDS: List[Dict[str, str]] = [
-    *({"portal": "greenhouse", "org": o} for o in (
-        "stripe", "airbnb", "databricks", "cloudflare", "gitlab", "figma",
-        "discord", "robinhood", "coinbase", "dropbox", "twilio", "asana",
+    *({"portal": "greenhouse", "org": o, "name": n} for o, n in (
+        ("stripe", "Stripe"), ("airbnb", "Airbnb"), ("databricks", "Databricks"), ("cloudflare", "Cloudflare"),
+        ("gitlab", "GitLab"), ("figma", "Figma"), ("discord", "Discord"), ("robinhood", "Robinhood"),
+        ("coinbase", "Coinbase"), ("dropbox", "Dropbox"), ("twilio", "Twilio"), ("asana", "Asana"),
     )),
-    {"portal": "lever", "org": "spotify"},
-    *({"portal": "ashby", "org": o} for o in ("openai", "linear", "notion", "ramp", "supabase")),
+    {"portal": "lever", "org": "spotify", "name": "Spotify"},
+    *({"portal": "ashby", "org": o, "name": n} for o, n in (
+        ("openai", "OpenAI"), ("linear", "Linear"), ("notion", "Notion"), ("ramp", "Ramp"), ("supabase", "Supabase"),
+    )),
 ]
+MAX_WORKDAY_QUERIES = 2       # role titles searched on each Workday site
+MAX_WORKDAY_DETAILS = 5       # full descriptions fetched per Workday employer
+MAX_CONCURRENT_REQUESTS = 8
 MAX_NEW_MATCHES_PER_RUN = 50
 _SENIORITY = {"senior", "sr", "staff", "principal", "junior", "jr"}
 
@@ -163,6 +170,7 @@ class AtsJobScraper:
                     "location": j.get("location", {}).get("name", "Remote") if isinstance(j.get("location"), dict) else "Remote",
                     "description": j.get("content", "") or j.get("title", ""),
                     "portal_type": "greenhouse",
+                    "posted_at": _iso(j.get("updated_at")),
                 })
             return jobs
         except Exception:
@@ -199,6 +207,7 @@ class AtsJobScraper:
                     "location": location,
                     "description": j.get("descriptionPlain", "") or j.get("text", ""),
                     "portal_type": "lever",
+                    "posted_at": _epoch_ms(j.get("createdAt")),
                 })
             return jobs
         except Exception:
@@ -233,6 +242,7 @@ class AtsJobScraper:
                     "location": j.get("location", "Remote"),
                     "description": j.get("descriptionPlain", "") or j.get("title", ""),
                     "portal_type": "ashby",
+                    "posted_at": _iso(j.get("publishedAt")),
                 })
             return jobs
         except Exception:
@@ -298,6 +308,14 @@ scout_scheduler = ScoutSchedulerService()
 ats_scraper = AtsJobScraper()
 
 
+def _iso(value: Any) -> Optional[datetime]:
+    return sources._iso(value)
+
+
+def _epoch_ms(value: Any) -> Optional[datetime]:
+    return sources._epoch(int(value) // 1000) if value else None
+
+
 def _words(text: str) -> Set[str]:
     return set(re.findall(r"[a-z0-9]+", text.lower()))
 
@@ -321,59 +339,125 @@ async def run_scout(
     tenant_id: str,
     boards: Optional[List[Dict[str, str]]] = None,
     client: Optional[httpx.AsyncClient] = None,
+    open_sources: bool = True,
 ) -> Dict[str, int]:
-    """Scans public job boards and matches postings whose title fits a selected role.
+    """Finds new postings for the candidate's roles across every source, scores them, stores matches.
 
-    Already-matched jobs are skipped, so repeated runs only add new postings.
-    Callers must not hold an open write transaction: the network fetch takes seconds
-    and would lock SQLite for every other request.
+    Pipeline: fetch all sources concurrently -> keep fresh postings in the candidate's work mode and
+    locations -> drop duplicates (across sources and already-matched jobs) -> match titles to roles ->
+    interleave companies under the per-run cap -> fetch Workday details for the chosen few -> store.
+    All network I/O finishes before the first write so SQLite is never locked during a fetch.
     """
+    from app.domain.candidate_facts import get_facts, update_facts
     from app.domain.jobs import job_service
+    from app.domain.models import JobListing
 
     roles = sorted(await roles_service.get_selected_roles(session, tenant_id), key=lambda r: r.rank)
-    boards = DEFAULT_BOARDS if boards is None else boards
     if not roles:
-        return {"boards_scanned": 0, "new_matches": 0}
+        return {"sources": 0, "boards_scanned": 0, "new_matches": 0}
+    facts = await get_facts(session, tenant_id)
+    boards = list(DEFAULT_BOARDS if boards is None else boards)
+    queries = list(dict.fromkeys(r.title for r in roles))[:3]
     role_phrases = [(r, _role_phrases(r)) for r in roles]
-
-    fetchers = {
-        "greenhouse": AtsJobScraper.fetch_greenhouse_jobs,
-        "lever": AtsJobScraper.fetch_lever_jobs,
-        "ashby": AtsJobScraper.fetch_ashby_jobs,
+    seen_keys = {
+        sources.dedupe_key({"company": c, "title": t})
+        for c, t in (await session.execute(
+            select(JobListing.company, JobListing.title)
+            .join(JobMatch, JobMatch.job_id == JobListing.id)
+            .where(JobMatch.tenant_id == tenant_id)
+        )).all()
     }
+
     owns_client = client is None
-    client = client or httpx.AsyncClient(timeout=20.0)
+    client = client or httpx.AsyncClient(timeout=20.0, follow_redirects=True)
+    limiter = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+    async def limited(coro):
+        async with limiter:
+            try:
+                return await coro
+            except Exception:  # one broken source must not sink the scan
+                return []
+
     try:
-        results = await asyncio.gather(
-            *(fetchers[b["portal"]](b["org"], client=client) for b in boards if b["portal"] in fetchers)
-        )
+        # Boards of companies the candidate named: discover once, then cache in their facts.
+        known_boards: Dict[str, Optional[str]] = dict(facts.get("company_boards") or {})
+        wanted = [c for c in facts.get("target_companies") or [] if c not in known_boards]
+        if wanted:
+            known_boards.update(await sources.discover_boards(client, wanted))
+        for company, board in known_boards.items():
+            if board and company in (facts.get("target_companies") or []):
+                portal, org = board.split(":", 1)
+                boards.append({"portal": portal, "org": org, "name": company})
+
+        ats = {"greenhouse": AtsJobScraper.fetch_greenhouse_jobs, "lever": AtsJobScraper.fetch_lever_jobs,
+               "ashby": AtsJobScraper.fetch_ashby_jobs}
+        tasks, labels = [], []
+        for b in boards:
+            if b["portal"] in ats:
+                tasks.append(limited(ats[b["portal"]](b["org"], client=client)))
+                labels.append(b.get("name"))
+        if open_sources:
+            opens = [sources.remoteok(client), sources.arbeitnow(client), sources.hn_who_is_hiring(client)]
+            for q in queries:
+                opens += [sources.remotive(client, q), sources.himalayas(client, q)]
+            for employer in sources.WORKDAY_EMPLOYERS:
+                opens += [sources.workday(client, employer, q) for q in queries[:MAX_WORKDAY_QUERIES]]
+            tasks += [limited(c) for c in opens]
+            labels += [None] * len(opens)
+        results = await asyncio.gather(*tasks)
+
+        # Filter, de-duplicate, match roles, interleave companies.
+        now = datetime.now(timezone.utc)
+        candidates = []
+        per_company: Dict[str, int] = {}
+        for label, postings in zip(labels, results, strict=True):
+            for posting in postings:
+                if label:
+                    posting["company"] = label
+                if not sources.is_fresh(posting, now) or not sources.passes_location(posting, facts):
+                    continue
+                key = sources.dedupe_key(posting)
+                if key in seen_keys:
+                    continue
+                title_words = _words(posting["title"])
+                role = next((r for r, phrases in role_phrases if any(p <= title_words for p in phrases)), None)
+                if not role:
+                    continue
+                seen_keys.add(key)
+                nth = per_company.get(posting["company"], 0)
+                per_company[posting["company"]] = nth + 1
+                candidates.append((nth, role, posting))
+        candidates.sort(key=lambda c: (c[0], c[1].rank))
+        chosen = candidates[:MAX_NEW_MATCHES_PER_RUN]
+
+        # Workday search results have no description: fetch it only for the postings we keep.
+        employers = {e["name"]: e for e in sources.WORKDAY_EMPLOYERS}
+        detail_budget: Dict[str, int] = {}
+        detail_jobs = []
+        for i, (_, _, posting) in enumerate(chosen):
+            employer = employers.get(posting["company"])
+            if posting["portal_type"] == "workday" and employer:
+                used = detail_budget.get(employer["name"], 0)
+                if used < MAX_WORKDAY_DETAILS:
+                    detail_budget[employer["name"]] = used + 1
+                    detail_jobs.append((i, limited(sources.workday_detail(client, employer, posting))))
+        for (i, _), detailed in zip(detail_jobs, await asyncio.gather(*(c for _, c in detail_jobs)), strict=True):
+            if detailed:
+                nth, role, _ = chosen[i]
+                chosen[i] = (nth, role, detailed)
     finally:
         if owns_client:
             await client.aclose()
 
-    # Pair each posting with the highest-priority role it matches, then interleave companies
-    # (each company's 1st match, then 2nd, ...) so the per-run cap isn't filled by one big board.
-    candidates = []
-    for postings in results:
-        nth = 0  # this company's nth matching posting
-        for posting in postings:
-            title_words = _words(posting["title"])
-            role = next((r for r, phrases in role_phrases if any(p <= title_words for p in phrases)), None)
-            if role:
-                candidates.append((nth, role, posting))
-                nth += 1
-    candidates.sort(key=lambda c: (c[0], c[1].rank))
-
+    # --- writes start here ---
+    if known_boards != (facts.get("company_boards") or {}):
+        await update_facts(session, tenant_id, {"company_boards": known_boards})
     matched_job_ids = set(
-        (await session.execute(
-            select(JobMatch.job_id).where(JobMatch.tenant_id == tenant_id)
-        )).scalars().all()
+        (await session.execute(select(JobMatch.job_id).where(JobMatch.tenant_id == tenant_id))).scalars().all()
     )
     new_job_ids: List[str] = []
-    new_matches = 0
-    for _, role, posting in candidates:
-        if new_matches >= MAX_NEW_MATCHES_PER_RUN:
-            break
+    for _, role, posting in chosen:
         job = await job_service.ingest_job(
             session=session,
             title=posting["title"],
@@ -394,18 +478,26 @@ async def run_scout(
             why_matched=f"Title matches your target role '{role.title}'.",
             status="new",
         ))
-        new_matches += 1
 
-    if new_matches:
+    if new_job_ids:
         from app.domain.fit_service import evaluate_tenant
 
         await session.flush()
         await evaluate_tenant(session, tenant_id, new_job_ids)  # real JD fit replaces the title-only score
         await outbox.record_event(
-            session=session, tenant_id=tenant_id, event_name="jobs.found", payload={"count": new_matches}
+            session=session, tenant_id=tenant_id, event_name="jobs.found", payload={"count": len(new_job_ids)}
         )
     await session.flush()
-    return {"boards_scanned": len(boards), "new_matches": new_matches}
+    return {"sources": len(tasks), "boards_scanned": len(boards), "new_matches": len(new_job_ids)}
+
+
+async def scan_in_background(tenant_id: str) -> None:
+    """One scan in its own session (used after the scan-now request has returned)."""
+    from app.core.database import async_session_factory
+
+    async with async_session_factory() as session:
+        await run_scout(session, tenant_id)
+        await session.commit()
 
 
 async def start_scout_in_background(tenant_id: str) -> None:

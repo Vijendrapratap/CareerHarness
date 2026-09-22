@@ -204,3 +204,78 @@ async def test_run_scout_scores_new_matches_against_the_jd(db_session, sample_te
     match = (await db_session.execute(select(JobMatch).where(JobMatch.tenant_id == sample_tenant.id))).scalars().first()
     fit = await get_fit(db_session, sample_tenant.id, match.job_id)
     assert fit is not None and match.match_score == fit.score * 2
+
+
+# --- Open sources wired into the scout --------------------------------------------------------
+
+def _multi_source_transport(fresh_iso="2026-09-20T10:00:00Z", stale_iso="2026-07-01T10:00:00Z"):
+    routes = {
+        "boards-api.greenhouse.io/v1/boards/acme/": {"jobs": [
+            {"id": 1, "title": "Backend Engineer", "absolute_url": "https://gh/acme/1", "location": {"name": "Remote"},
+             "content": "x" * 400, "updated_at": fresh_iso}]},
+        "boards-api.greenhouse.io/v1/boards/zeta/": {"jobs": [
+            {"id": 9, "title": "Backend Engineer, Platform", "absolute_url": "https://gh/zeta/9",
+             "location": {"name": "Remote"}, "content": "x" * 400}]},
+        "remotive.com": {"jobs": [
+            {"title": "Backend Engineer", "company_name": "Acme", "candidate_required_location": "Worldwide",
+             "publication_date": fresh_iso, "url": "https://remotive.com/dup", "description": "dup"},
+            {"title": "Senior Backend Engineer", "company_name": "OldCo", "candidate_required_location": "Worldwide",
+             "publication_date": stale_iso, "url": "https://remotive.com/old", "description": "old"}]},
+        "myworkdayjobs.com": {"jobPostings": [
+            {"title": "Backend Engineer", "locationsText": "Santa Clara, CA", "postedOn": "Posted Today",
+             "externalPath": "/job/SC/BE_1"}]},
+    }
+
+    def handler(request):
+        for needle, body in routes.items():
+            if needle in str(request.url):
+                return httpx.Response(200, text=json.dumps(body))
+        return httpx.Response(404)
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.asyncio
+async def test_scout_merges_sources_dedupes_drops_stale_and_filters_location(db_session, sample_tenant):
+    from app.domain.candidate_facts import get_facts, update_facts
+
+    tid = sample_tenant.id
+    await roles_service.select_roles(db_session, tid, ["role_backend_arch"])
+    await update_facts(db_session, tid, {"work_mode": "remote_only", "target_companies": ["Zeta"]})
+    async with httpx.AsyncClient(transport=_multi_source_transport()) as c:
+        result = await run_scout(db_session, tid, boards=[{"portal": "greenhouse", "org": "acme", "name": "Acme"}], client=c)
+
+    rows = (await db_session.execute(
+        select(JobListing.company, JobListing.title, JobListing.url)
+        .join(JobMatch, JobMatch.job_id == JobListing.id).where(JobMatch.tenant_id == tid)
+    )).all()
+    companies = sorted(r.company for r in rows)
+    assert companies == ["Acme", "Zeta"]                 # remotive duplicate of Acme merged, OldCo stale
+    assert all("myworkdayjobs" not in r.url for r in rows)  # onsite Workday job filtered for remote-only
+    assert result["new_matches"] == 2
+    assert (await get_facts(db_session, tid))["company_boards"] == {"Zeta": "greenhouse:zeta"}
+
+
+@pytest.mark.asyncio
+async def test_scan_now_returns_immediately_and_scans_in_background(client, sample_tenant, monkeypatch):
+    started = []
+
+    async def fake_scan(tid):
+        started.append(tid)
+
+    monkeypatch.setattr("app.api.routers.scout.scan_in_background", fake_scan)
+    res = await client.post("/api/scout/scan-now", headers={"X-Tenant-ID": sample_tenant.id})
+    assert res.status_code == 200 and res.json()["status"] == "scanning"
+    assert started == [sample_tenant.id]
+
+
+@pytest.mark.asyncio
+async def test_finishing_counsel_rescans_with_the_new_facts(client, sample_tenant, monkeypatch):
+    started = []
+
+    async def fake_scan(tid):
+        started.append(tid)
+
+    monkeypatch.setattr("app.api.routers.counsel.scan_in_background", fake_scan)
+    await client.post("/api/counsel/finalize", headers={"X-Tenant-ID": sample_tenant.id})
+    assert started == [sample_tenant.id]

@@ -2,7 +2,7 @@
 
 from typing import Any, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from app.domain.counsel import (
     record_answer,
 )
 from app.domain.roles import RoleSelectionError
+from app.domain.scout import scan_in_background
 
 router = APIRouter(prefix="/api/counsel", tags=["Candidate Counsellor"])
 
@@ -295,6 +296,7 @@ async def update_counsel_preferences(
 
 @router.post("/finalize")
 async def finalize_counsel(
+    background_tasks: BackgroundTasks,
     tenant_id: str = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -303,4 +305,6 @@ async def finalize_counsel(
     journey = await get_or_create_journey(db, tenant_id)
     if journey.stage in ("counsel", "todos", "mailbox"):
         journey = await set_stage(db, tenant_id, "hunt")
+    # The first scan ran when roles were picked, before these facts existed: scan again with them.
+    background_tasks.add_task(scan_in_background, tenant_id)
     return {"done": True, "stage": journey.stage}

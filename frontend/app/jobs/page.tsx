@@ -14,6 +14,8 @@ interface SkillFix {
 }
 
 type Tab = "ready" | "stretch" | "skip";
+const SCAN_POLLS = 12; // ~1 minute
+const SOURCES = ["Greenhouse", "Lever", "Ashby", "Workday", "RemoteOK", "Remotive", "Himalayas", "Arbeitnow", "HN Hiring"];
 
 function tabOf(job: JobItem): Tab {
   if (!job.fit) return "stretch";
@@ -55,6 +57,27 @@ export default function JobsPage() {
   const [fixes, setFixes] = useState<SkillFix[]>([]);
   const [busySkill, setBusySkill] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab | null>(null);
+  const [scanPolls, setScanPolls] = useState(0);
+  const [jobsBeforeScan, setJobsBeforeScan] = useState<number | null>(null);
+
+  // After "Scan again" the scan runs server-side; refresh quietly until it has had time to finish.
+  useEffect(() => {
+    if (scanPolls <= 0) return;
+    const t = setTimeout(async () => {
+      const [jobList, fixList] = await Promise.all([
+        api<JobItem[]>("/api/jobs").catch(() => null),
+        api<SkillFix[]>("/api/fit/fixes").catch(() => null),
+      ]);
+      if (jobList) setJobs(jobList);
+      if (fixList) setFixes(fixList);
+      if (scanPolls === 1 && jobList && jobsBeforeScan !== null) {
+        const added = jobList.length - jobsBeforeScan;
+        setScanMessage(added > 0 ? `Scan finished: ${added} new match${added === 1 ? "" : "es"}.` : "Scan finished: no new matches this time.");
+      }
+      setScanPolls((n) => n - 1);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [scanPolls, jobsBeforeScan]);
   const [scoutPolls, setScoutPolls] = useState(0);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -110,15 +133,13 @@ export default function JobsPage() {
     setError(null);
     setScanMessage(null);
     try {
-      const data = await api<{ new_matches: number; boards_scanned: number; scans_remaining: number }>(
-        "/api/scout/scan-now",
-        { method: "POST" }
-      );
+      const data = await api<{ scans_remaining: number }>("/api/scout/scan-now", { method: "POST" });
+      setJobsBeforeScan(jobs.length);
+      setScanPolls(SCAN_POLLS);
       setScanMessage(
-        `Scanned ${data.boards_scanned} company job boards: ${data.new_matches} new match${data.new_matches === 1 ? "" : "es"}. ` +
+        `Scanning company boards, Workday sites, remote job boards and HN. New matches appear here as they're scored. ` +
           `${data.scans_remaining} manual scan${data.scans_remaining === 1 ? "" : "s"} left today.`
       );
-      await loadData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -216,24 +237,25 @@ export default function JobsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="text-xs uppercase font-bold tracking-wider text-teal-900">
-                Live ATS Discovery
+                Sources
               </span>
-              <span className="badge-emerald text-[10px] py-0.5 px-2">Greenhouse</span>
-              <span className="badge-sky text-[10px] py-0.5 px-2">Lever</span>
-              <span className="badge-amber text-[10px] py-0.5 px-2">Ashby</span>
+              {SOURCES.map((src) => (
+                <span key={src} className="badge-sky text-[10px] py-0.5 px-2">{src}</span>
+              ))}
             </div>
-            <h2 className="text-lg font-bold text-ink tracking-tight">Autonomous Match Pipeline</h2>
+            <h2 className="text-lg font-bold text-ink tracking-tight">Scout is watching {SOURCES.length} sources for you</h2>
             <p className="text-xs text-muted mt-0.5">
-              Scout started when you picked your roles and keeps checking public company job boards for postings that match them.
+              Fresh postings (last 30 days) that match your roles, work mode and locations, de-duplicated across sources.
+              Add companies you love in Counsel and Scout watches their boards too.
             </p>
           </div>
           <div>
             <button
               onClick={handleScanNow}
-              disabled={scanning}
+              disabled={scanning || scanPolls > 0}
               className="px-6 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md btn-amber hover:shadow-lg hover:shadow-amber-500/25 active:scale-[0.97] disabled:opacity-60"
             >
-              {scanning ? "Scanning job boards..." : "Scan Again Now ⚡"}
+              {scanning ? "Starting..." : scanPolls > 0 ? "Scanning..." : "Scan Again Now ⚡"}
             </button>
           </div>
         </div>

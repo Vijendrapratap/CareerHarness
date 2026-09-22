@@ -34,9 +34,12 @@ FACT_QUESTIONS: List[Dict[str, Any]] = [
      "prompt": "Anything that's a hard no? (e.g. on-call, crypto, 5 days in office)"},
     {"id": "blacklist_companies", "kind": "list",
      "prompt": "Any companies you don't want to apply to?"},
+    {"id": "target_companies", "kind": "list",
+     "prompt": "Any companies you'd love to work at? I'll watch their job boards too."},
 ]
 _BY_ID = {q["id"]: q for q in FACT_QUESTIONS}
 _INTERNAL_LISTS = {"declined_skills", "skipped"}  # set by the product, not asked
+_INTERNAL_DICTS = {"company_boards"}  # company -> "portal:slug" or None (scout discovery cache)
 
 
 def _clean_list(value: Any, key: str) -> List[str]:
@@ -55,6 +58,10 @@ def _clean_list(value: Any, key: str) -> List[str]:
 def _validate(key: str, value: Any) -> Any:
     if key in _INTERNAL_LISTS:
         return _clean_list(value, key)
+    if key in _INTERNAL_DICTS:
+        if not isinstance(value, dict):
+            raise ValueError(f"{key} must be an object")
+        return {str(k): (str(v) if v else None) for k, v in value.items()}
     q = _BY_ID.get(key)
     if q is None:
         raise ValueError(f"Unknown fact '{key}'")

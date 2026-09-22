@@ -83,3 +83,5 @@ def no_background_scout(monkeypatch):
         return None
 
     monkeypatch.setattr("app.api.routers.roles.start_scout_in_background", _noop)
+    monkeypatch.setattr("app.api.routers.scout.scan_in_background", _noop)
+    monkeypatch.setattr("app.api.routers.counsel.scan_in_background", _noop)
