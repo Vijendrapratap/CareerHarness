@@ -169,13 +169,15 @@ export default function JobsPage() {
     <Shell title="Scouted Jobs Board">
       <div className="w-full space-y-6">
         {/* Scout Trigger Header */}
-        <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="neo-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/80 bg-white/70 backdrop-blur-md shadow-md">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs uppercase font-bold tracking-wider text-teal-800">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-xs uppercase font-bold tracking-wider text-teal-900">
                 Live ATS Discovery
               </span>
-              <span className="badge-cyan text-[10px] py-0.5 px-2">Greenhouse • Lever • Ashby</span>
+              <span className="badge-emerald text-[10px] py-0.5 px-2">Greenhouse</span>
+              <span className="badge-sky text-[10px] py-0.5 px-2">Lever</span>
+              <span className="badge-amber text-[10px] py-0.5 px-2">Ashby</span>
             </div>
             <h2 className="text-lg font-bold text-ink tracking-tight">Autonomous Match Pipeline</h2>
             <p className="text-xs text-muted mt-0.5">
@@ -186,10 +188,10 @@ export default function JobsPage() {
             <button
               onClick={handleScanNow}
               disabled={isScanDisabled || scanning}
-              className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              className={`px-6 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md ${
                 isScanDisabled
                   ? "neo-inset opacity-50 cursor-not-allowed text-muted"
-                  : "btn-teal"
+                  : "btn-amber hover:shadow-lg hover:shadow-amber-500/25 active:scale-[0.97]"
               }`}
             >
               {scanning ? "Scanning Portals..." : "Trigger Scout Now ⚡"}
@@ -333,14 +335,17 @@ export default function JobsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        item.match_score >= 8.0
-                          ? "badge-emerald"
-                          : item.match_score >= 6.0
-                          ? "badge-cyan"
-                          : "badge-bronze"
+                      className={`text-xs font-black px-3.5 py-1 rounded-full border shadow-xs flex items-center gap-1.5 ${
+                        item.match_score >= 8.5
+                          ? "badge-emerald border-emerald-400/80"
+                          : item.match_score >= 7.0
+                          ? "badge-sky border-sky-400/80"
+                          : "badge-amber border-amber-400/80"
                       }`}
                     >
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        item.match_score >= 8.5 ? "bg-emerald-500 animate-pulse" : item.match_score >= 7.0 ? "bg-sky-500" : "bg-amber-500"
+                      }`} />
                       Fit: {item.match_score.toFixed(1)} / 10
                     </span>
                   </div>
@@ -367,7 +372,7 @@ export default function JobsPage() {
                     type="button"
                     disabled={preparingJobId === item.job_id}
                     onClick={() => handleChoose(item.job_id, "refine")}
-                    className="btn-teal px-5 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                    className="btn-teal px-5 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 active:scale-[0.97]"
                   >
                     {preparingJobId === item.job_id ? "Tailoring..." : "Refine for this job ✦"}
                   </button>

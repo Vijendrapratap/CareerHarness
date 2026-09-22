@@ -239,42 +239,58 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {keys.map((k) => (
-                    <div
-                      key={k.id}
-                      className="p-4 rounded-xl neo-raised bg-white flex items-center justify-between gap-4 border border-slate-200/80"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold uppercase text-ink tracking-wide">
-                            {k.provider}
-                          </span>
-                          <span
-                            className={
-                              k.status === "active"
-                                ? "badge-emerald text-[10px] py-0.2 px-1.5"
-                                : "badge-bronze text-[10px] py-0.2 px-1.5"
-                            }
-                          >
-                            {k.status}
-                          </span>
-                          {k.is_default && (
-                            <span className="badge-teal text-[10px] py-0.2 px-1.5">Default</span>
-                          )}
-                        </div>
-                        <p className="text-xs font-mono text-muted">{k.masked_preview}</p>
-                      </div>
+                  {keys.map((k) => {
+                    const providerTheme =
+                      k.provider.toLowerCase() === "openai"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        : k.provider.toLowerCase() === "anthropic"
+                        ? "bg-amber-50 text-amber-800 border-amber-200"
+                        : k.provider.toLowerCase() === "gemini"
+                        ? "bg-sky-50 text-sky-800 border-sky-200"
+                        : "bg-teal-50 text-teal-800 border-teal-200";
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteKey(k.provider)}
-                        disabled={deletingProvider === k.provider}
-                        className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-3 py-1.5 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all disabled:opacity-50"
+                    return (
+                      <div
+                        key={k.id}
+                        className="p-4 rounded-xl neo-raised bg-white/90 flex items-center justify-between gap-4 border border-slate-200/80 transition-all hover:border-teal-300/60"
                       >
-                        {deletingProvider === k.provider ? "Purging..." : "Remove"}
-                      </button>
-                    </div>
-                  ))}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-md border ${providerTheme}`}
+                            >
+                              {k.provider}
+                            </span>
+                            <span
+                              className={
+                                k.status === "active"
+                                  ? "badge-emerald text-[10px] py-0.5 px-2 flex items-center gap-1"
+                                  : "badge-bronze text-[10px] py-0.5 px-2"
+                              }
+                            >
+                              {k.status === "active" && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              )}
+                              {k.status}
+                            </span>
+                            {k.is_default && (
+                              <span className="badge-teal text-[10px] py-0.5 px-2">Primary</span>
+                            )}
+                          </div>
+                          <p className="text-xs font-mono text-muted">{k.masked_preview}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteKey(k.provider)}
+                          disabled={deletingProvider === k.provider}
+                          className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-3 py-1.5 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all disabled:opacity-50 active:scale-[0.97]"
+                        >
+                          {deletingProvider === k.provider ? "Purging..." : "Remove"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -365,18 +381,22 @@ export default function SettingsPage() {
                     Work Arrangement
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {["Remote Only", "Hybrid", "On-site"].map((opt) => (
+                    {[
+                      { id: "Remote Only", activeColor: "bg-teal-600 text-white shadow-sm shadow-teal-600/30" },
+                      { id: "Hybrid", activeColor: "bg-sky-600 text-white shadow-sm shadow-sky-600/30" },
+                      { id: "On-site", activeColor: "bg-amber-600 text-white shadow-sm shadow-amber-600/30" },
+                    ].map((opt) => (
                       <button
-                        key={opt}
+                        key={opt.id}
                         type="button"
-                        onClick={() => setWorkArrangement(opt)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                          workArrangement === opt
-                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                            : "neo-raised text-ink hover:text-teal-700"
+                        onClick={() => setWorkArrangement(opt.id)}
+                        className={`px-3.5 py-1.5 text-xs rounded-xl font-bold transition-all active:scale-[0.97] ${
+                          workArrangement === opt.id
+                            ? `${opt.activeColor} ring-1 ring-white/20`
+                            : "neo-raised text-muted hover:text-ink bg-white/60"
                         }`}
                       >
-                        {opt}
+                        {opt.id}
                       </button>
                     ))}
                   </div>
@@ -392,7 +412,7 @@ export default function SettingsPage() {
                     value={targetLocation}
                     onChange={(e) => setTargetLocation(e.target.value)}
                     placeholder="e.g. US Remote, San Francisco, New York..."
-                    className="neo-inset w-full px-4 py-2 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                    className="neo-inset w-full px-4 py-2.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
                   />
                 </div>
 
@@ -404,7 +424,7 @@ export default function SettingsPage() {
                   <select
                     value={authorization}
                     onChange={(e) => setAuthorization(e.target.value)}
-                    className="neo-inset w-full px-4 py-2 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                    className="neo-inset w-full px-4 py-2.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500/30 rounded-xl"
                   >
                     <option value="Authorized (No Sponsorship Required)">
                       Authorized (Citizen / PR, No Sponsorship)
@@ -430,10 +450,10 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => setLeadershipTrack("ic")}
-                      className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl transition-all ${
+                      className={`flex-1 py-2 px-3 text-xs rounded-xl font-bold transition-all active:scale-[0.97] ${
                         leadershipTrack === "ic"
-                          ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                          : "neo-raised text-ink hover:text-teal-700"
+                          ? "bg-teal-600 text-white shadow-sm shadow-teal-600/30 ring-1 ring-white/20"
+                          : "neo-raised text-muted hover:text-ink bg-white/60"
                       }`}
                     >
                       Senior / Staff IC
@@ -441,10 +461,10 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => setLeadershipTrack("lead")}
-                      className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl transition-all ${
+                      className={`flex-1 py-2 px-3 text-xs rounded-xl font-bold transition-all active:scale-[0.97] ${
                         leadershipTrack === "lead"
-                          ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                          : "neo-raised text-ink hover:text-teal-700"
+                          ? "bg-amber-600 text-white shadow-sm shadow-amber-600/30 ring-1 ring-white/20"
+                          : "neo-raised text-muted hover:text-ink bg-white/60"
                       }`}
                     >
                       Lead / Manager
@@ -468,10 +488,10 @@ export default function SettingsPage() {
                         key={d}
                         type="button"
                         onClick={() => toggleDealbreaker(d)}
-                        className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all ${
+                        className={`px-2.5 py-1 text-[11px] rounded-lg transition-all active:scale-[0.97] ${
                           selectedDealbreakers.includes(d)
-                            ? "bg-rose-100 text-rose-800 border border-rose-300 font-semibold"
-                            : "neo-raised text-muted hover:text-ink"
+                            ? "bg-rose-50 text-rose-800 border border-rose-300 font-bold shadow-sm"
+                            : "neo-raised text-muted hover:text-ink hover:border-slate-300"
                         }`}
                       >
                         {selectedDealbreakers.includes(d) ? `✕ ${d}` : `+ ${d}`}
@@ -484,7 +504,7 @@ export default function SettingsPage() {
                   <button
                     type="submit"
                     disabled={savingPrefs}
-                    className="btn-teal px-6 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md"
+                    className="btn-teal px-6 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md active:scale-[0.97]"
                   >
                     {savingPrefs ? "Saving..." : "Save Preferences →"}
                   </button>

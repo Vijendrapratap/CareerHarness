@@ -142,7 +142,7 @@ export default function MailboxPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-teal w-full py-3.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                className="btn-teal w-full py-3.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md hover:shadow-teal-500/20 active:scale-[0.97]"
               >
                 {loading ? "Connecting & Verifying..." : "Connect & Continue to Scouted Jobs →"}
               </button>
@@ -152,33 +152,33 @@ export default function MailboxPage() {
 
         {/* Security & Safeguards Card (5 cols) */}
         <div className="lg:col-span-5 space-y-5">
-          <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-gradient-to-br from-white/90 to-teal-50/20">
+          <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-gradient-to-br from-white/95 to-teal-50/30">
             <div className="flex items-center gap-2">
               <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Safety Mandate</span>
               <h3 className="text-xs font-bold text-ink uppercase tracking-wider">Human-in-the-Loop Protocol</h3>
             </div>
             <div className="space-y-3 text-xs text-muted">
-              <div className="p-3.5 rounded-xl neo-inset bg-white/60 space-y-1">
-                <p className="font-bold text-ink flex items-center gap-1.5">
+              <div className="p-3.5 rounded-xl border border-emerald-200/70 bg-emerald-50/40 space-y-1">
+                <p className="font-bold text-emerald-900 flex items-center gap-1.5">
                   <span>🛡️</span> Zero Unapproved Outbound
                 </p>
-                <p className="text-[11px] leading-relaxed">
+                <p className="text-[11px] leading-relaxed text-emerald-800/80">
                   CareerHarness will never send cold outreach or job applications autonomously without your explicit click on the Front-Face dashboard.
                 </p>
               </div>
-              <div className="p-3.5 rounded-xl neo-inset bg-white/60 space-y-1">
-                <p className="font-bold text-ink flex items-center gap-1.5">
+              <div className="p-3.5 rounded-xl border border-sky-200/70 bg-sky-50/40 space-y-1">
+                <p className="font-bold text-sky-900 flex items-center gap-1.5">
                   <span>🔐</span> Envelope Encryption
                 </p>
-                <p className="text-[11px] leading-relaxed">
+                <p className="text-[11px] leading-relaxed text-sky-800/80">
                   Tokens are stored using AES-256-GCM symmetric encryption with rotating key derivation. Decrypted strictly within local process memory.
                 </p>
               </div>
-              <div className="p-3.5 rounded-xl neo-inset bg-white/60 space-y-1">
-                <p className="font-bold text-ink flex items-center gap-1.5">
+              <div className="p-3.5 rounded-xl border border-amber-200/70 bg-amber-50/40 space-y-1">
+                <p className="font-bold text-amber-900 flex items-center gap-1.5">
                   <span>📥</span> Inbound Reply Syncing
                 </p>
-                <p className="text-[11px] leading-relaxed">
+                <p className="text-[11px] leading-relaxed text-amber-800/80">
                   Replies from recruiters automatically populate the Recruiter Inbox so you never miss an interview invite or technical screening.
                 </p>
               </div>

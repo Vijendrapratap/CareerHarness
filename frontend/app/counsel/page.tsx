@@ -571,17 +571,28 @@ export default function CounselPage() {
     <Shell title="Career Counsellor & Job Matching">
       <div className="space-y-6">
         {/* Onboarding Stepper Header with Direct Skip Action */}
-        <div className="neo-raised p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="neo-raised p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-white/80 bg-white/70 backdrop-blur-md shadow-md shadow-slate-200/50">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-600 via-teal-700 to-cyan-700 text-white flex items-center justify-center font-bold text-sm shadow-md">
-              🎯
+            <div className={`h-11 w-11 rounded-2xl text-white flex items-center justify-center font-bold text-lg shadow-md shrink-0 ${
+              currentStage === "resume"
+                ? "bg-gradient-to-br from-teal-600 via-teal-700 to-emerald-600 shadow-teal-700/20"
+                : currentStage === "linkedin"
+                ? "bg-gradient-to-br from-sky-600 via-cyan-600 to-blue-600 shadow-sky-700/20"
+                : currentStage === "target_jobs"
+                ? "bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-amber-700/20"
+                : "bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 shadow-emerald-700/20"
+            }`}>
+              {currentStage === "resume" && "📄"}
+              {currentStage === "linkedin" && "💼"}
+              {currentStage === "target_jobs" && "🎯"}
+              {currentStage === "live_chat" && "🚀"}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-teal-900">
                   Career Counsellor Engine
                 </span>
-                <span className="badge-teal text-[10px] py-0.5 px-2">DeepSeek Intelligence</span>
+                <span className="badge-sky text-[10px] py-0.5 px-2">DeepSeek Intelligence</span>
               </div>
               <h2 className="text-sm font-bold text-ink">
                 {currentStage === "resume" && "Step 1 of 4: Upload Resume (Required)"}
@@ -597,12 +608,12 @@ export default function CounselPage() {
             <button
               type="button"
               onClick={() => setCurrentStage("resume")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all ${
                 currentStage === "resume"
-                  ? "neo-pressed text-teal-800 border border-teal-500/40"
+                  ? "neo-pressed text-teal-950 font-black border border-teal-500/50 bg-gradient-to-r from-teal-50 to-emerald-50 shadow-inner"
                   : uploadedResume
-                  ? "neo-raised text-emerald-700 hover:text-teal-700"
-                  : "neo-raised text-muted"
+                  ? "bg-emerald-50/90 text-emerald-800 border border-emerald-300/80 hover:bg-emerald-100"
+                  : "neo-raised text-muted hover:text-ink"
               }`}
             >
               1. Resume {uploadedResume && "✓"}
@@ -614,15 +625,15 @@ export default function CounselPage() {
                 if (uploadedResume) setCurrentStage("linkedin");
               }}
               disabled={!uploadedResume}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
                 currentStage === "linkedin"
-                  ? "neo-pressed text-teal-800 border border-teal-500/40"
+                  ? "neo-pressed text-sky-950 font-black border border-sky-500/50 bg-gradient-to-r from-sky-50 to-cyan-50 shadow-inner"
                   : persona.linkedinUrl
-                  ? "neo-raised text-emerald-700 hover:text-teal-700"
-                  : "neo-raised text-muted"
+                  ? "bg-sky-50/90 text-sky-800 border border-sky-300/80 hover:bg-sky-100"
+                  : "neo-raised text-muted hover:text-ink"
               }`}
             >
-              2. LinkedIn
+              2. LinkedIn {persona.linkedinUrl && "✓"}
             </button>
 
             <button
@@ -631,12 +642,12 @@ export default function CounselPage() {
                 if (uploadedResume) setCurrentStage("target_jobs");
               }}
               disabled={!uploadedResume}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
                 currentStage === "target_jobs"
-                  ? "neo-pressed text-teal-800 border border-teal-500/40"
+                  ? "neo-pressed text-amber-950 font-black border border-amber-500/50 bg-gradient-to-r from-amber-50 to-orange-50 shadow-inner"
                   : selectedRoleIds.length > 0
-                  ? "neo-raised text-emerald-700 hover:text-teal-700"
-                  : "neo-raised text-muted"
+                  ? "bg-amber-50/90 text-amber-800 border border-amber-300/80 hover:bg-amber-100"
+                  : "neo-raised text-muted hover:text-ink"
               }`}
             >
               3. Target Roles ({selectedRoleIds.length}/3)
@@ -651,10 +662,10 @@ export default function CounselPage() {
                 }
               }}
               disabled={!uploadedResume || selectedRoleIds.length === 0}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition-all disabled:opacity-40 ${
                 currentStage === "live_chat"
-                  ? "neo-pressed text-teal-800 border border-teal-500/40"
-                  : "neo-raised text-muted"
+                  ? "neo-pressed text-teal-950 font-black border border-teal-500/50 bg-gradient-to-r from-teal-50 via-emerald-50 to-cyan-50 shadow-inner"
+                  : "neo-raised text-muted hover:text-ink"
               }`}
             >
               4. Job Matches & Preferences
@@ -666,7 +677,7 @@ export default function CounselPage() {
                 type="button"
                 onClick={handleFinalizePersona}
                 disabled={finalizingPersona}
-                className="btn-teal px-4 py-1.5 text-xs font-bold uppercase tracking-wider ml-2 shadow-sm"
+                className="btn-amber px-4 py-2 text-xs font-bold uppercase tracking-wider ml-2 shadow-sm"
               >
                 {finalizingPersona ? "Loading..." : "Scout My Jobs →"}
               </button>
@@ -789,19 +800,31 @@ export default function CounselPage() {
                     </div>
 
                     {uploadedResume.extractedSkills.length > 0 && (
-                      <div className="text-left space-y-1.5">
-                        <span className="text-[11px] font-bold uppercase text-muted tracking-wider">
-                          Extracted Technical Skills:
-                        </span>
+                      <div className="text-left space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase text-teal-900 tracking-wider">
+                            Extracted Technical Skills ({uploadedResume.extractedSkills.length}):
+                          </span>
+                          <span className="badge-emerald text-[10px] py-0.5 px-2">Verified ATS Keywords</span>
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {uploadedResume.extractedSkills.slice(0, 18).map((skill) => (
-                            <span
-                              key={skill}
-                              className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-teal-100/70 text-teal-900 border border-teal-200"
-                            >
-                              {skill}
-                            </span>
-                          ))}
+                          {uploadedResume.extractedSkills.slice(0, 18).map((skill, idx) => {
+                            const palette = [
+                              "bg-sky-50 text-sky-900 border-sky-300 hover:border-sky-400 hover:bg-sky-100",
+                              "bg-emerald-50 text-emerald-900 border-emerald-300 hover:border-emerald-400 hover:bg-emerald-100",
+                              "bg-amber-50 text-amber-900 border-amber-300 hover:border-amber-400 hover:bg-amber-100",
+                              "bg-teal-50 text-teal-900 border-teal-300 hover:border-teal-400 hover:bg-teal-100",
+                              "bg-orange-50 text-orange-900 border-orange-300 hover:border-orange-400 hover:bg-orange-100",
+                            ];
+                            return (
+                              <span
+                                key={skill}
+                                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border shadow-xs transition-all ${palette[idx % palette.length]}`}
+                              >
+                                {skill}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -823,33 +846,33 @@ export default function CounselPage() {
 
             {/* Side Guidance & Intel (5 cols) */}
             <div className="lg:col-span-5 space-y-5">
-              <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-gradient-to-br from-white/90 to-teal-50/20">
+              <div className="neo-card p-6 space-y-4 border border-teal-500/30 bg-gradient-to-br from-white/95 via-teal-50/25 to-emerald-50/20 shadow-md shadow-teal-900/5">
                 <div className="flex items-center gap-2">
                   <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Extraction Engine</span>
                   <span className="text-xs font-bold text-ink">What We Extract</span>
                 </div>
                 <div className="space-y-3 text-xs text-muted">
-                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
-                    <p className="font-bold text-ink flex items-center gap-1.5">
-                      <span>🛠️</span> Core Tech Stack & Systems
+                  <div className="p-3.5 rounded-xl border border-teal-200/80 bg-gradient-to-r from-teal-50/90 via-white to-emerald-50/40 space-y-1 shadow-xs">
+                    <p className="font-bold text-teal-950 flex items-center gap-1.5">
+                      <span className="text-base">🛠️</span> Core Tech Stack & Systems
                     </p>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       Languages, frameworks, data pipelines, cloud infra, and architectural patterns.
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
-                    <p className="font-bold text-ink flex items-center gap-1.5">
-                      <span>📈</span> Business Scale & Scope
+                  <div className="p-3.5 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-white to-blue-50/40 space-y-1 shadow-xs">
+                    <p className="font-bold text-sky-950 flex items-center gap-1.5">
+                      <span className="text-base">📈</span> Business Scale & Scope
                     </p>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       Team size, cross-functional leadership, user throughput, and production traffic.
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
-                    <p className="font-bold text-ink flex items-center gap-1.5">
-                      <span>🎯</span> Quantified Impact Metrics
+                  <div className="p-3.5 rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/40 space-y-1 shadow-xs">
+                    <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                      <span className="text-base">🎯</span> Quantified Impact Metrics
                     </p>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       Latency drops, revenue acceleration, cost savings, and feature delivery speeds.
                     </p>
                   </div>
@@ -884,11 +907,11 @@ export default function CounselPage() {
             <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-cyan-100 text-cyan-800 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-600 to-blue-600 text-white flex items-center justify-center text-2xl shadow-md shadow-sky-600/20 shrink-0">
                     💼
                   </div>
                   <div>
-                    <span className="badge-cyan text-[10px] py-0.5 px-2 font-bold">Step 2 of 4 (Optional)</span>
+                    <span className="badge-sky text-[10px] py-0.5 px-2 font-bold">Step 2 of 4 (Optional)</span>
                     <h3 className="text-xl font-bold text-ink">Add Your LinkedIn Profile</h3>
                   </div>
                 </div>
@@ -908,12 +931,12 @@ export default function CounselPage() {
                     value={linkedinInput}
                     onChange={(e) => setLinkedinInput(e.target.value)}
                     placeholder="https://www.linkedin.com/in/your-profile"
-                    className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                    className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
                   />
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 text-[11px] text-muted leading-relaxed">
-                  💡 <span className="font-semibold text-ink">Why add LinkedIn?</span> Gives Scout
+                <div className="p-3.5 rounded-xl bg-sky-50/70 border border-sky-200 text-[11px] text-sky-950 leading-relaxed shadow-xs">
+                  💡 <span className="font-bold text-sky-900">Why add LinkedIn?</span> Gives Scout
                   context on your public presence and company pedigree to craft personalized recruiter
                   pitch angles and verify market presence.
                 </div>
@@ -933,7 +956,7 @@ export default function CounselPage() {
                   type="button"
                   onClick={() => handleSaveLinkedin(false)}
                   disabled={savingLinkedin}
-                  className="btn-teal px-8 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md"
+                  className="btn-sky px-8 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md"
                 >
                   {savingLinkedin ? "Saving..." : "Save & Continue →"}
                 </button>
@@ -942,33 +965,33 @@ export default function CounselPage() {
 
             {/* Side Guidance & Intel (5 cols) */}
             <div className="lg:col-span-5 space-y-5">
-              <div className="neo-card p-6 space-y-4 border border-cyan-500/20 bg-gradient-to-br from-white/90 to-cyan-50/20">
+              <div className="neo-card p-6 space-y-4 border border-sky-500/30 bg-gradient-to-br from-white/95 via-sky-50/30 to-blue-50/20 shadow-md shadow-sky-900/5">
                 <div className="flex items-center gap-2">
-                  <span className="badge-cyan text-[10px] py-0.5 px-2 font-bold">Candidate Positioning</span>
+                  <span className="badge-sky text-[10px] py-0.5 px-2 font-bold">Candidate Positioning</span>
                   <span className="text-xs font-bold text-ink">Public Signal Calibration</span>
                 </div>
                 <div className="space-y-3 text-xs text-muted">
-                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
-                    <p className="font-bold text-ink flex items-center gap-1.5">
-                      <span>🌐</span> Public Pedigree & Tenure
+                  <div className="p-3.5 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-white to-blue-50/40 space-y-1 shadow-xs">
+                    <p className="font-bold text-sky-950 flex items-center gap-1.5">
+                      <span className="text-base">🌐</span> Public Pedigree & Tenure
                     </p>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       Calibrates organizational hierarchy, company prestige, and career progression speed.
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
-                    <p className="font-bold text-ink flex items-center gap-1.5">
-                      <span>✉️</span> Recruiter Outreach Vectoring
+                  <div className="p-3.5 rounded-xl border border-teal-200/80 bg-gradient-to-r from-teal-50/90 via-white to-sky-50/40 space-y-1 shadow-xs">
+                    <p className="font-bold text-teal-950 flex items-center gap-1.5">
+                      <span className="text-base">✉️</span> Recruiter Outreach Vectoring
                     </p>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       Scout creates high-converting outreach copy highlighting mutual connections and company backgrounds.
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl neo-inset bg-white/50 space-y-1">
-                    <p className="font-bold text-ink flex items-center gap-1.5">
-                      <span>⚡</span> 100% Optional
+                  <div className="p-3.5 rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/40 space-y-1 shadow-xs">
+                    <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                      <span className="text-base">⚡</span> 100% Optional
                     </p>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       If you don't use LinkedIn or prefer not to share, skip with no penalty. Your resume is sufficient.
                     </p>
                   </div>
@@ -987,11 +1010,11 @@ export default function CounselPage() {
             <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-center text-2xl shadow-md shadow-amber-600/20 shrink-0">
                     🎯
                   </div>
                   <div>
-                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Step 3 of 4</span>
+                    <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">Step 3 of 4</span>
                     <h3 className="text-xl font-bold text-ink">What kind of job are you looking for?</h3>
                   </div>
                 </div>
@@ -1086,31 +1109,31 @@ export default function CounselPage() {
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    "Staff Backend Engineer",
-                    "Full Stack Engineer",
-                    "Senior Software Engineer",
-                    "AI Systems Engineer",
-                    "Engineering Manager",
-                    "Platform / DevOps Engineer",
+                    { title: "Staff Backend Engineer", style: "bg-teal-50 text-teal-900 border-teal-300 hover:bg-teal-100" },
+                    { title: "Full Stack Engineer", style: "bg-sky-50 text-sky-900 border-sky-300 hover:bg-sky-100" },
+                    { title: "Senior Software Engineer", style: "bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100" },
+                    { title: "AI Systems Engineer", style: "bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100" },
+                    { title: "Engineering Manager", style: "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100" },
+                    { title: "Platform / DevOps Engineer", style: "bg-orange-50 text-orange-900 border-orange-300 hover:bg-orange-100" },
                   ].map((preset) => {
                     const matched = catalogRoles.find(
-                      (r) => r.title.toLowerCase() === preset.toLowerCase()
+                      (r) => r.title.toLowerCase() === preset.title.toLowerCase()
                     );
-                    const roleId = matched ? matched.id : preset;
+                    const roleId = matched ? matched.id : preset.title;
                     const isSelected = selectedRoleIds.includes(roleId);
                     return (
                       <button
-                        key={preset}
+                        key={preset.title}
                         type="button"
                         onClick={() => handleSelectRole(roleId)}
                         disabled={isSelected || selectedRoleIds.length >= 3}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
                           isSelected
-                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold opacity-60"
-                            : "neo-raised text-ink hover:text-teal-700"
+                            ? "opacity-40 line-through bg-slate-100 border-slate-200 text-muted"
+                            : `${preset.style} shadow-xs hover:-translate-y-0.5`
                         }`}
                       >
-                        {isSelected ? `✓ ${preset}` : `+ ${preset}`}
+                        {isSelected ? `✓ ${preset.title}` : `+ ${preset.title}`}
                       </button>
                     );
                   })}
@@ -1133,23 +1156,25 @@ export default function CounselPage() {
 
             {/* Selected Roles & Scout Weighting (5 cols) */}
             <div className="lg:col-span-5 space-y-5">
-              <div className="neo-card p-6 space-y-4">
+              <div className="neo-card p-6 space-y-4 border border-amber-500/30 bg-gradient-to-br from-white/95 via-amber-50/25 to-orange-50/20 shadow-md shadow-amber-900/5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Selected</span>
+                    <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">Selected</span>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
                       Target Roles ({selectedRoleIds.length}/3 max)
                     </h4>
                   </div>
-                  {selectedRoleIds.length === 3 && (
-                    <span className="badge-bronze text-[10px] py-0.5 px-2">Slot Max</span>
+                  {selectedRoleIds.length === 3 ? (
+                    <span className="badge-emerald text-[10px] py-0.5 px-2 font-bold">3/3 Max Slots</span>
+                  ) : (
+                    <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">{selectedRoleIds.length}/3 Filled</span>
                   )}
                 </div>
 
                 {selectedRoleIds.length === 0 ? (
                   <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-muted space-y-2">
                     <p className="text-xl">🎯</p>
-                    <p>No roles selected yet.</p>
+                    <p className="font-semibold text-slate-700">No roles selected yet.</p>
                     <p className="text-[11px]">Use the search bar or popular chips on the left to add up to 3 market roles.</p>
                   </div>
                 ) : (
@@ -1166,21 +1191,21 @@ export default function CounselPage() {
                           key={roleId}
                           className={`p-3.5 rounded-xl flex items-center justify-between border transition-all ${
                             isPriority
-                              ? "bg-teal-50/80 border-teal-400/80 shadow-sm"
-                              : "bg-slate-50 border-slate-200"
+                              ? "bg-gradient-to-r from-amber-50/95 via-orange-50/50 to-white border-amber-400/90 shadow-md shadow-amber-500/10"
+                              : "bg-white/80 border-slate-200/90 hover:border-slate-300"
                           }`}
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               {isPriority ? (
-                                <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">
+                                <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">
                                   ⭐ #1 Priority (1.5× Weight)
                                 </span>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleMakePriority(roleId)}
-                                  className="text-[10px] text-muted hover:text-teal-700 underline font-medium"
+                                  className="text-[10px] text-teal-700 hover:text-teal-900 underline font-semibold"
                                 >
                                   Make Priority #1
                                 </button>
@@ -1206,8 +1231,10 @@ export default function CounselPage() {
                   </div>
                 )}
 
-                <div className="p-3.5 rounded-xl neo-inset bg-slate-50/60 text-[11px] text-muted leading-relaxed space-y-1 border border-slate-200/60">
-                  <p className="font-semibold text-ink">⚡ Scout Search Weighting:</p>
+                <div className="p-3.5 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/40 text-[11px] text-slate-700 leading-relaxed space-y-1 shadow-xs">
+                  <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                    <span>⚡</span> Scout Search Weighting:
+                  </p>
                   <p>
                     Your #1 priority role directs 60% of autonomous ATS scrapers and auto-tailors your primary CV. Secondary roles receive opportunistic coverage.
                   </p>
@@ -1255,18 +1282,12 @@ export default function CounselPage() {
               </div>
 
               {/* 3 Job Match Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {diagnosisRoles.slice(0, 3).map((rId, idx) => {
                   const match = catalogRoles.find((r) => r.id === rId);
                   const title =
                     match?.title || rId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                   const matchScore = idx === 0 ? "96%" : idx === 1 ? "91%" : "86%";
-                  const badgeClass =
-                    idx === 0
-                      ? "badge-emerald"
-                      : idx === 1
-                      ? "badge-teal"
-                      : "badge-cyan";
                   const roleRank =
                     idx === 0 ? "Primary Target (#1 Focus)" : idx === 1 ? "Secondary Complement" : "Growth Opportunity";
                   const salaryBand =
@@ -1276,36 +1297,62 @@ export default function CounselPage() {
                       ? "$175k - $225k • Senior Tier"
                       : "$180k - $235k • Specialized";
 
+                  const tierStyles = [
+                    {
+                      border: "border-emerald-500/70 ring-1 ring-emerald-500/20 shadow-md shadow-emerald-700/10 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40",
+                      badge: "badge-emerald",
+                      rankBadge: "badge-emerald",
+                      salaryColor: "text-emerald-800",
+                      verifiedColor: "text-emerald-700",
+                      pulseDot: "bg-emerald-500",
+                    },
+                    {
+                      border: "border-sky-500/70 ring-1 ring-sky-500/20 shadow-md shadow-sky-700/10 bg-gradient-to-br from-sky-50/70 via-white to-cyan-50/40",
+                      badge: "badge-sky",
+                      rankBadge: "badge-sky",
+                      salaryColor: "text-sky-800",
+                      verifiedColor: "text-sky-700",
+                      pulseDot: "bg-sky-500",
+                    },
+                    {
+                      border: "border-amber-500/70 ring-1 ring-amber-500/20 shadow-md shadow-amber-700/10 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40",
+                      badge: "badge-amber",
+                      rankBadge: "badge-amber",
+                      salaryColor: "text-amber-800",
+                      verifiedColor: "text-amber-700",
+                      pulseDot: "bg-amber-500",
+                    },
+                  ];
+
+                  const tier = tierStyles[idx] || tierStyles[0];
+
                   return (
                     <div
                       key={rId}
-                      className={`neo-raised p-4 rounded-xl space-y-2 border transition-all ${
-                        idx === 0
-                          ? "border-teal-500/50 bg-teal-50/40 shadow-sm"
-                          : "border-slate-200/80 bg-white/70"
-                      }`}
+                      className={`p-5 rounded-2xl space-y-3 border transition-all ${tier.border}`}
                     >
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-bold text-teal-800">{roleRank}</span>
-                        <span className={`${badgeClass} text-[10px] py-0.5 px-2 font-bold`}>
+                        <span className={`${tier.rankBadge} font-bold py-0.5 px-2.5`}>{roleRank}</span>
+                        <span className={`${tier.badge} py-0.5 px-2.5 font-black flex items-center gap-1.5`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${tier.pulseDot} animate-pulse`} />
                           {matchScore} Fit
                         </span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-ink">{title}</h4>
+                      <h4 className="text-base font-black text-ink leading-snug">{title}</h4>
 
-                      <div className="text-[11px] text-muted space-y-1">
+                      <div className="text-xs text-muted space-y-1.5 bg-white/70 p-3 rounded-xl border border-slate-200/50">
                         <p>
-                          <span className="font-semibold text-slate-700">Market Demand:</span> High
-                          hiring activity
+                          <span className="font-semibold text-slate-700">Market Demand:</span>{" "}
+                          <span className="text-teal-800 font-semibold">High velocity</span>
                         </p>
                         <p>
                           <span className="font-semibold text-slate-700">Estimated Band:</span>{" "}
-                          <span className="text-emerald-800 font-bold">{salaryBand}</span>
+                          <span className={`${tier.salaryColor} font-bold`}>{salaryBand}</span>
                         </p>
                       </div>
 
-                      <div className="text-[10px] text-teal-700 pt-1 font-semibold flex items-center gap-1">
+                      <div className={`text-[11px] ${tier.verifiedColor} pt-0.5 font-semibold flex items-center gap-1`}>
                         <span>✓ Verified by Career Counsellor</span>
                       </div>
                     </div>
@@ -1315,7 +1362,7 @@ export default function CounselPage() {
             </div>
 
             {/* Middle Section: Quick 1-Click Search Preferences (No endless chat needed!) */}
-            <div className="neo-card p-6 space-y-5">
+            <div className="neo-card p-6 space-y-5 border border-white/80 bg-white/70 backdrop-blur-md shadow-md">
               <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
                 <div>
                   <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
@@ -1327,7 +1374,7 @@ export default function CounselPage() {
                   </p>
                 </div>
                 {prefsSavedFeedback && (
-                  <span className="badge-emerald text-[11px] py-1 px-3 animate-pulse">
+                  <span className="badge-emerald text-[11px] py-1 px-3 animate-pulse shadow-xs">
                     ✓ Preferences auto-saved
                   </span>
                 )}
@@ -1336,7 +1383,7 @@ export default function CounselPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* 1. Work Arrangement */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-teal-900">
                     Work Arrangement Preference
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -1348,10 +1395,10 @@ export default function CounselPage() {
                           setWorkArrangement(opt);
                           persistPreferences({ workArrangement: opt });
                         }}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
                           workArrangement === opt
-                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                            : "neo-raised text-ink hover:text-teal-700"
+                            ? "bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs ring-1 ring-teal-400/30"
+                            : "neo-raised text-ink hover:text-teal-800 hover:border-teal-300/60"
                         }`}
                       >
                         {workArrangement === opt ? `✓ ${opt}` : opt}
@@ -1362,7 +1409,7 @@ export default function CounselPage() {
 
                 {/* 2. Target Tech Hubs */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-sky-900">
                     Target Location & Timezones
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -1381,10 +1428,10 @@ export default function CounselPage() {
                           setTargetLocation(opt);
                           persistPreferences({ targetLocation: opt });
                         }}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
                           targetLocation === opt
-                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                            : "neo-raised text-ink hover:text-teal-700"
+                            ? "bg-sky-50 border-sky-500 text-sky-950 font-bold shadow-xs ring-1 ring-sky-400/30"
+                            : "neo-raised text-ink hover:text-sky-800 hover:border-sky-300/60"
                         }`}
                       >
                         {targetLocation === opt ? `✓ ${opt}` : opt}
@@ -1395,7 +1442,7 @@ export default function CounselPage() {
 
                 {/* 3. Work Authorization */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-emerald-900">
                     Work Authorization Status
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -1411,10 +1458,10 @@ export default function CounselPage() {
                           setAuthorization(opt);
                           persistPreferences({ authorization: opt });
                         }}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
                           authorization === opt
-                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                            : "neo-raised text-ink hover:text-teal-700"
+                            ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs ring-1 ring-emerald-400/30"
+                            : "neo-raised text-ink hover:text-emerald-800 hover:border-emerald-300/60"
                         }`}
                       >
                         {authorization === opt ? `✓ ${opt}` : opt}
@@ -1425,7 +1472,7 @@ export default function CounselPage() {
 
                 {/* 4. Career Track */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-900">
                     Career Track Scope
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -1441,10 +1488,10 @@ export default function CounselPage() {
                           setLeadershipTrack(track);
                           persistPreferences({ leadershipTrack: track });
                         }}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
                           leadershipTrack === opt.key
-                            ? "neo-pressed text-teal-800 border border-teal-500 font-bold"
-                            : "neo-raised text-ink hover:text-teal-700"
+                            ? "bg-amber-50 border-amber-500 text-amber-950 font-bold shadow-xs ring-1 ring-amber-400/30"
+                            : "neo-raised text-ink hover:text-amber-800 hover:border-amber-300/60"
                         }`}
                       >
                         {leadershipTrack === opt.key ? `✓ ${opt.label}` : opt.label}
@@ -1455,8 +1502,8 @@ export default function CounselPage() {
               </div>
 
               {/* 5. Dealbreakers to Filter Out */}
-              <div className="space-y-2 pt-2 border-t border-slate-200/70">
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+              <div className="space-y-2 pt-3 border-t border-slate-200/70">
+                <label className="block text-xs font-bold uppercase tracking-wider text-rose-900">
                   Dealbreakers to Filter Out from Scout Matches:
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1473,10 +1520,10 @@ export default function CounselPage() {
                         key={dbItem}
                         type="button"
                         onClick={() => toggleDealbreaker(dbItem)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
                           isSelected
-                            ? "neo-pressed text-rose-700 border border-rose-300 font-bold bg-rose-50/40"
-                            : "neo-raised text-muted hover:text-ink"
+                            ? "bg-rose-50 border-rose-400 text-rose-800 font-bold shadow-xs ring-1 ring-rose-300/40"
+                            : "neo-raised text-muted hover:text-rose-700 hover:border-rose-300/50"
                         }`}
                       >
                         {isSelected ? `🚫 Filter out: ${dbItem}` : `+ ${dbItem}`}
@@ -1545,19 +1592,19 @@ export default function CounselPage() {
                   </div>
 
                   {/* Advisory Prompt Chips */}
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {[
-                      "💬 What skills are most in demand for Staff Backend roles right now?",
-                      "💬 How should I position my resume for remote engineering teams?",
-                      "💬 What are current market base salary expectations?",
+                      { text: "💬 What skills are most in demand for Staff Backend roles right now?", style: "bg-sky-50 text-sky-900 border-sky-300/80 hover:bg-sky-100" },
+                      { text: "💬 How should I position my resume for remote engineering teams?", style: "bg-emerald-50 text-emerald-900 border-emerald-300/80 hover:bg-emerald-100" },
+                      { text: "💬 What are current market base salary expectations?", style: "bg-amber-50 text-amber-900 border-amber-300/80 hover:bg-amber-100" },
                     ].map((chip) => (
                       <button
-                        key={chip}
+                        key={chip.text}
                         type="button"
-                        onClick={() => handleSendChatMessage(chip)}
-                        className="px-2.5 py-1 text-[11px] rounded-lg neo-raised text-ink hover:text-teal-700 text-left"
+                        onClick={() => handleSendChatMessage(chip.text)}
+                        className={`px-3 py-1.5 text-[11px] font-semibold rounded-xl border shadow-xs text-left transition-all hover:-translate-y-0.5 ${chip.style}`}
                       >
-                        {chip}
+                        {chip.text}
                       </button>
                     ))}
                   </div>
@@ -1611,7 +1658,7 @@ export default function CounselPage() {
                   type="button"
                   onClick={handleFinalizePersona}
                   disabled={finalizingPersona}
-                  className="btn-teal px-10 py-3.5 text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-500 hover:via-emerald-500 hover:to-teal-600 text-white px-10 py-3.5 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-teal-700/25 hover:shadow-xl hover:shadow-teal-700/35 transition-all active:scale-[0.97]"
                 >
                   {finalizingPersona
                     ? "Launching Scout..."

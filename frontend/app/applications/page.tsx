@@ -16,13 +16,13 @@ interface TrackedApplication {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  applied: "badge-cyan",
+  applied: "badge-sky",
   acknowledged: "badge-teal",
-  interview: "badge-emerald",
-  assessment: "badge-teal",
-  offer: "badge-emerald font-bold",
-  rejected: "bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full text-xs font-semibold",
-  ghosted: "badge-bronze",
+  interview: "badge-emerald font-bold",
+  assessment: "badge-cyan",
+  offer: "bg-emerald-100 text-emerald-800 border border-emerald-300 font-black shadow-sm",
+  rejected: "badge-rose",
+  ghosted: "badge-amber",
   withdrawn: "bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full text-xs font-semibold",
 };
 

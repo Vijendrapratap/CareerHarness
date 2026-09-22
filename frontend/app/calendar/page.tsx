@@ -83,7 +83,7 @@ export default function CalendarPage() {
               type="button"
               disabled={triggering}
               onClick={handleRunReminders}
-              className="btn-teal px-4 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+              className="btn-amber px-4 py-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-sm active:scale-[0.97]"
             >
               {triggering ? "Checking..." : "Run Checks ⚡"}
             </button>
@@ -91,7 +91,7 @@ export default function CalendarPage() {
         </div>
 
         {triggerMsg && (
-          <div className="p-4 text-xs text-emerald-900 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2">
+          <div className="p-4 text-xs font-semibold text-emerald-900 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2 shadow-sm">
             <span>✓</span>
             <span>{triggerMsg}</span>
           </div>
@@ -124,7 +124,7 @@ export default function CalendarPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-4">
                       {/* Date Badge */}
-                      <div className="neo-inset px-3 py-2 text-center rounded-xl min-w-[70px] border border-slate-200/50 bg-white/40">
+                      <div className="neo-inset px-3 py-2 text-center rounded-xl min-w-[70px] border border-teal-200/50 bg-gradient-to-b from-teal-50/50 to-white/70">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 block">
                           {dateObj.toLocaleDateString(undefined, { month: "short" })}
                         </span>
@@ -170,7 +170,7 @@ export default function CalendarPage() {
                       className={
                         evt.reminder_24h_sent
                           ? "badge-emerald"
-                          : "badge-bronze"
+                          : "badge-amber"
                       }
                     >
                       {evt.reminder_24h_sent ? "✓ 24h Reminder Dispatched" : "⏱ 24h Reminder Pending"}
@@ -179,7 +179,7 @@ export default function CalendarPage() {
                       className={
                         evt.reminder_1h_sent
                           ? "badge-emerald"
-                          : "badge-cyan"
+                          : "badge-sky"
                       }
                     >
                       {evt.reminder_1h_sent ? "✓ 1h Reminder Dispatched" : "⏱ 1h Reminder Pending"}
