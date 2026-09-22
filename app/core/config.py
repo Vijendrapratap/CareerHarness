@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
+    # OpenRouter API Key
+    OPENROUTER_API_KEY: str = ""
+
     # Host & Ports
     HOST: str = "0.0.0.0"
     PORT: int = 8000
