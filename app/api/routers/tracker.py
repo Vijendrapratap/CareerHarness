@@ -233,3 +233,14 @@ async def detect_ghosted_endpoint(
         "ghosted_count": len(ghosted),
         "ghosted_application_ids": [g.id for g in ghosted],
     }
+
+
+@router.get("/inbox")
+async def get_recruiter_inbox(
+    tenant_id: str = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Returns conversation threads grouped by application."""
+    from app.domain.inbox import list_recruiter_threads
+    threads = await list_recruiter_threads(session, tenant_id)
+    return {"threads": threads}
