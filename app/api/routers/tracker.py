@@ -133,6 +133,7 @@ async def list_tracked_applications_endpoint(
             "company_name": a.company_name,
             "job_title": a.job_title,
             "status": a.status,
+            "resume_version_id": a.resume_version_id,
             "is_ghosted": a.is_ghosted,
             "applied_at": a.applied_at.isoformat(),
             "last_activity_at": a.last_activity_at.isoformat(),

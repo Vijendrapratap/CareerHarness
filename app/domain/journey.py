@@ -43,3 +43,10 @@ async def refresh_stage_from_readiness(session: AsyncSession, tenant_id: str) ->
     if status.is_ready:
         await set_stage(session, tenant_id, "mailbox")
     return (await get_or_create_journey(session, tenant_id)).stage
+
+
+async def note_application_submitted(session: AsyncSession, tenant_id: str) -> str:
+    journey = await get_or_create_journey(session, tenant_id)
+    if journey.stage == "hunt":
+        await set_stage(session, tenant_id, "active")
+    return (await get_or_create_journey(session, tenant_id)).stage

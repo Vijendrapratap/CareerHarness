@@ -350,6 +350,10 @@ async def submit_application_endpoint(
         cover_letter=cover_body,
     )
 
+    # Advance journey to active if on hunt
+    from app.domain.journey import note_application_submitted
+    await note_application_submitted(session, tenant_id)
+
     return {
         "audit_log_id": audit_log.id,
         "application_id": track.id,

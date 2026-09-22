@@ -53,3 +53,21 @@ async def test_ready_todos_advance_to_mailbox(db_session, sample_tenant):
 
     blocked_stage = await refresh_stage_from_readiness(db_session, sample_tenant.id)
     assert blocked_stage == "todos"
+
+
+@pytest.mark.asyncio
+async def test_hunt_becomes_active_after_submit(db_session, sample_tenant):
+    from app.domain.journey import note_application_submitted
+
+    # When on todos, note_application_submitted leaves todos unchanged
+    await set_stage(db_session, sample_tenant.id, "todos")
+    stage = await note_application_submitted(db_session, sample_tenant.id)
+    assert stage == "todos"
+
+    # When on hunt, note_application_submitted advances to active
+    await set_stage(db_session, sample_tenant.id, "hunt")
+    new_stage = await note_application_submitted(db_session, sample_tenant.id)
+    assert new_stage == "active"
+    journey = await get_or_create_journey(db_session, sample_tenant.id)
+    assert journey.stage == "active"
+
