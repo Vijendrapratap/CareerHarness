@@ -157,12 +157,36 @@ async def process_inbound_email_endpoint(
         body_text=req.body_text,
         application_id=req.application_id,
     )
+
+    if email_record.classification == "interview" and email_record.application_id:
+        import re
+        from datetime import datetime
+        iso_match = re.search(
+            r"\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?(?:[Zz]|[+-]\d{2}:?\d{2})?",
+            req.body_text,
+        )
+        if iso_match:
+            try:
+                raw_ts = iso_match.group(0).replace(" ", "T")
+                dt = datetime.fromisoformat(raw_ts)
+                from app.domain.calendar import record_interview
+                await record_interview(
+                    session=session,
+                    tenant_id=tenant_id,
+                    application_id=email_record.application_id,
+                    starts_at=dt,
+                    title=f"Interview: {req.subject}",
+                )
+            except ValueError:
+                pass
+
     return {
         "id": email_record.id,
         "classification": email_record.classification,
         "confidence": email_record.confidence_score,
         "application_id": email_record.application_id,
     }
+
 
 
 @router.post("/outreach/draft")
@@ -244,3 +268,36 @@ async def get_recruiter_inbox(
     from app.domain.inbox import list_recruiter_threads
     threads = await list_recruiter_threads(session, tenant_id)
     return {"threads": threads}
+
+
+class RemindersRunRequest(BaseModel):
+    now: Optional[str] = None
+
+
+@router.get("/interviews")
+async def list_interviews_endpoint(
+    tenant_id: str = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    """List calendar interview events for candidate."""
+    from app.domain.calendar import list_interviews
+    return await list_interviews(session, tenant_id)
+
+
+@router.post("/reminders/run")
+async def run_reminders_endpoint(
+    req: RemindersRunRequest,
+    tenant_id: str = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Test endpoint that evaluates due reminder windows and generates sent reminder messages."""
+    from datetime import datetime, timezone
+    from app.domain.calendar import run_due_reminders
+    if req.now:
+        now_dt = datetime.fromisoformat(req.now)
+    else:
+        now_dt = datetime.now(timezone.utc)
+    emitted = await run_due_reminders(session, tenant_id, now_dt)
+    await session.commit()
+    return {"status": "ok", "reminders_sent": emitted}
+

@@ -117,6 +117,10 @@ class Tenant(Base):
     profile_sections: Mapped[list["ProfileSection"]] = relationship(
         "ProfileSection", back_populates="tenant", cascade="all, delete-orphan"
     )
+    interview_events: Mapped[list["InterviewEvent"]] = relationship(
+        "InterviewEvent", back_populates="tenant", cascade="all, delete-orphan"
+    )
+
 
 
 class ConnectedEmail(Base):
@@ -848,3 +852,34 @@ class ProfileSection(Base):
     __table_args__ = (
         Index("ix_profile_sections_tenant_step", "tenant_id", "step", unique=True),
     )
+
+
+class InterviewEvent(Base):
+    """Calendar interview event detected from recruiter communication (Task 12)."""
+    __tablename__ = "interview_events"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    application_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("applications_tracked.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reminder_24h_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    reminder_1h_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="interview_events")
+    application: Mapped["ApplicationTrack"] = relationship("ApplicationTrack")
+
+    __table_args__ = (
+        Index("ix_interview_events_app_starts", "application_id", "starts_at", unique=True),
+    )
+
