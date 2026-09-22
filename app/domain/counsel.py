@@ -238,15 +238,30 @@ async def record_answer(
             avoid = ""
         body = {"more_of": more_of, "avoid": avoid}
 
-    # 3. Store or update section
-    section_row = ProfileSection(
-        tenant_id=tenant_id,
-        section=section_key,
-        step=step,
-        body=body,
-        input_mode=input_mode,
-    )
-    session.add(section_row)
+    # 3. Store or update section (upsert)
+    existing_row = (
+        await session.execute(
+            select(ProfileSection).where(
+                ProfileSection.tenant_id == tenant_id,
+                ProfileSection.step == step,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if existing_row:
+        existing_row.section = section_key
+        existing_row.body = body
+        existing_row.input_mode = input_mode
+        section_row = existing_row
+    else:
+        section_row = ProfileSection(
+            tenant_id=tenant_id,
+            section=section_key,
+            step=step,
+            body=body,
+            input_mode=input_mode,
+        )
+        session.add(section_row)
     await session.flush()
 
     # Update memory of existing steps for history calculation
