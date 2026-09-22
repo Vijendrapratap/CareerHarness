@@ -138,27 +138,16 @@ async def record_answer(
     input_mode: Literal["text", "mic"] = "text",
 ) -> Dict[str, Any]:
     """Records the candidate's answer for the expected step and updates journey state."""
-    # 1. Verify step order
+    # 1. Verify step
+    if step == "target_roles":
+        step = "target_work"
+
+    if step not in COUNSEL_STEPS:
+        raise CounselValidationError(f"Unknown step '{step}'.")
+
     stmt = select(ProfileSection).where(ProfileSection.tenant_id == tenant_id)
     res = await session.execute(stmt)
     existing_by_step = {row.step: row for row in res.scalars().all()}
-
-    expected_step = None
-    for s in COUNSEL_STEPS:
-        if s not in existing_by_step:
-            expected_step = s
-            break
-
-    if expected_step is None:
-        return {
-            "step": None,
-            "prompt": "All onboarding questions answered.",
-            "choices": [],
-            "done": True,
-        }
-
-    if step != expected_step:
-        raise CounselOrderError(f"Expected step '{expected_step}', but got '{step}'.")
 
     section_key = STEP_SECTION_MAP[step]
     body: Dict[str, Any] = {}
@@ -272,16 +261,20 @@ async def record_answer(
     if step == "preferences":
         await set_stage(session, tenant_id, "todos")
 
-    # 4. Return next step state
-    curr_idx = COUNSEL_STEPS.index(step)
-    if curr_idx + 1 < len(COUNSEL_STEPS):
-        next_step = COUNSEL_STEPS[curr_idx + 1]
+    # 4. Return next step state (first unanswered step or completed)
+    next_unanswered = None
+    for s in COUNSEL_STEPS:
+        if s not in existing_by_step:
+            next_unanswered = s
+            break
+
+    if next_unanswered is not None:
         next_choices: List[Any] = []
-        if next_step == "priority_role":
-            next_choices = body.get("suggestions", [])
+        if next_unanswered == "priority_role" and "target_work" in existing_by_step:
+            next_choices = existing_by_step["target_work"].body.get("suggestions", [])
         return {
-            "step": next_step,
-            "prompt": PROMPTS[next_step],
+            "step": next_unanswered,
+            "prompt": PROMPTS[next_unanswered],
             "choices": next_choices,
             "history": history,
             "done": False,

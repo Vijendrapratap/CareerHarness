@@ -60,6 +60,14 @@ async def compute_gaps(
             "open_criticals": sum(1 for t in todos if t.severity == "critical" and t.status == "open"),
         }
     except GapEngineError as exc:
+        if "No target roles selected" in str(exc):
+            return {
+                "overall_score": 0,
+                "is_capped_at_69": False,
+                "cap_reason": "No target roles selected yet",
+                "total_todos": 0,
+                "open_criticals": 0,
+            }
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
@@ -92,6 +100,7 @@ async def list_todos(
     ]
 
 
+@router.post("/api/todos/{todo_id}", response_model=TodoItemResponse)
 @router.post("/api/todos/{todo_id}/action", response_model=TodoItemResponse)
 async def resolve_todo_action(
     todo_id: str,
@@ -126,6 +135,7 @@ async def resolve_todo_action(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
+@router.get("/api/gaps/readiness", response_model=ReadinessResponse)
 @router.get("/api/readiness", response_model=ReadinessResponse)
 async def get_readiness_status(
     tenant_id: str = Depends(get_tenant_id),

@@ -51,8 +51,8 @@ export default function TodosPage() {
 
   async function loadData() {
     const [todoList, readinessInfo] = await Promise.all([
-      api<TodoItem[]>("/api/todos"),
-      api<ReadinessData>("/api/gaps/readiness").catch(() => null),
+      api<TodoItem[]>("/api/todos").catch(() => []),
+      api<ReadinessData>("/api/readiness").catch(() => null),
     ]);
     setTodos(todoList.filter((t) => t.status === "open"));
     setReadiness(readinessInfo);
