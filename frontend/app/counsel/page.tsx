@@ -668,7 +668,7 @@ export default function CounselPage() {
                   : "neo-raised text-muted hover:text-ink"
               }`}
             >
-              4. Job Matches & Preferences
+              4. Counselor & Matches
             </button>
 
             {/* Quick Skip to Scout Action */}
@@ -700,27 +700,26 @@ export default function CounselPage() {
         {/* ==================================================================== */}
         {/* SCREEN 1: UPLOAD RESUME (VERY FIRST THING)                            */}
         {/* ==================================================================== */}
+        {/* ==================================================================== */}
+        {/* SCREEN 1: UPLOAD RESUME (VERY FIRST THING)                            */}
+        {/* ==================================================================== */}
         {currentStage === "resume" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-chat-in">
-            {/* Primary Action Card (7 cols) */}
-            <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
+          <div className="max-w-2xl mx-auto animate-chat-in">
+            <div className="neo-card p-8 sm:p-10 space-y-6 text-center">
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-2xl shadow-inner shrink-0">
-                    📄
-                  </div>
-                  <div>
-                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Step 1 of 4</span>
-                    <h3 className="text-xl font-bold text-ink">Upload Your Resume</h3>
-                  </div>
+                <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center text-3xl shadow-lg shadow-teal-600/20 mb-2">
+                  📄
                 </div>
-                <p className="text-xs text-muted leading-relaxed">
-                  Start by uploading your current CV or resume in PDF format. DeepSeek AI parses and
-                  extracts verified technical competencies, production scope, and quantifiable metrics.
+                <span className="badge-teal text-[10px] py-0.5 px-2.5 font-bold uppercase tracking-wider">
+                  Step 1 of 4 • Resume Upload
+                </span>
+                <h3 className="text-2xl font-black text-ink tracking-tight">Upload Your Resume</h3>
+                <p className="text-xs text-muted max-w-md mx-auto">
+                  PDF format only (up to 10MB). Automatically extracted into your private candidate persona.
                 </p>
               </div>
 
-              {/* Dropzone */}
+              {/* Interactive Dropzone */}
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -734,12 +733,12 @@ export default function CounselPage() {
                     processResumeFile(e.dataTransfer.files[0]);
                   }
                 }}
-                className={`p-8 rounded-2xl border-2 border-dashed transition-all duration-200 text-center space-y-4 ${
+                className={`p-8 sm:p-10 rounded-2xl border-2 border-dashed transition-all duration-200 text-center space-y-4 ${
                   isDragging
                     ? "border-teal-500 bg-teal-50/80 scale-[1.01]"
                     : uploadedResume
-                    ? "border-emerald-400 bg-emerald-50/20"
-                    : "border-slate-300 hover:border-teal-400 bg-slate-50/40"
+                    ? "border-emerald-400 bg-emerald-50/30"
+                    : "border-slate-300 hover:border-teal-400 bg-slate-50/50"
                 }`}
               >
                 <input
@@ -752,74 +751,78 @@ export default function CounselPage() {
                 />
 
                 {!uploadedResume && !uploadingResume && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-ink">
-                      Drag and drop your PDF resume here, or browse files
-                    </p>
+                  <div className="space-y-4 py-4">
+                    <div className="mx-auto h-16 w-16 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 text-2xl border border-teal-200">
+                      ☁️
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-ink">
+                        Drag & drop your PDF resume here
+                      </p>
+                      <p className="text-xs text-muted mt-1">or browse from your device</p>
+                    </div>
                     <label
                       htmlFor="resume-file-input"
-                      className="btn-teal inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md hover:shadow-lg transition-all"
+                      className="btn-teal inline-flex items-center justify-center gap-2 px-8 py-3 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md hover:shadow-lg transition-all active:scale-[0.97]"
                     >
                       <span>Choose Resume PDF</span>
                     </label>
-                    <p className="text-[11px] text-muted">PDF format only • Up to 10MB</p>
                   </div>
                 )}
 
                 {uploadingResume && (
-                  <div className="p-4 rounded-xl bg-teal-50/80 border border-teal-200 flex flex-col items-center justify-center gap-2 text-teal-800">
-                    <div className="h-6 w-6 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" />
-                    <p className="text-xs font-semibold">
-                      Extracting technical skills, project scopes, and metrics with AI...
+                  <div className="p-8 rounded-xl bg-teal-50/80 border border-teal-200 flex flex-col items-center justify-center gap-3 text-teal-800">
+                    <div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" />
+                    <p className="text-xs font-bold uppercase tracking-wider">
+                      Parsing Skills & Scope with AI...
                     </p>
-                    <span className="text-[11px] text-teal-600">This takes just a few seconds</span>
                   </div>
                 )}
 
                 {uploadedResume && !uploadingResume && (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-left flex items-start justify-between gap-3 shadow-sm">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-emerald-700 font-bold text-sm">✓</span>
-                          <span className="text-xs font-bold text-emerald-950 truncate max-w-[280px]">
+                  <div className="space-y-4 text-left">
+                    <div className="p-4 rounded-xl bg-emerald-50/90 border border-emerald-300 flex items-center justify-between gap-3 shadow-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="h-9 w-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                          ✓
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-emerald-950 truncate max-w-[280px]">
                             {uploadedResume.filename}
-                          </span>
+                          </p>
+                          <p className="text-[11px] text-emerald-800 font-medium">
+                            {uploadedResume.skillsCount} technical skills extracted
+                          </p>
                         </div>
-                        <p className="text-[11px] text-emerald-800 font-medium">
-                          Successfully parsed • {uploadedResume.skillsCount} skills detected and
-                          vaulted.
-                        </p>
                       </div>
                       <label
                         htmlFor="resume-file-input"
-                        className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline cursor-pointer shrink-0 py-1"
+                        className="text-xs font-bold text-teal-700 hover:text-teal-900 underline cursor-pointer shrink-0"
                       >
                         Change PDF
                       </label>
                     </div>
 
                     {uploadedResume.extractedSkills.length > 0 && (
-                      <div className="text-left space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase text-teal-900 tracking-wider">
-                            Extracted Technical Skills ({uploadedResume.extractedSkills.length}):
-                          </span>
-                          <span className="badge-emerald text-[10px] py-0.5 px-2">Verified ATS Keywords</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {uploadedResume.extractedSkills.slice(0, 18).map((skill, idx) => {
+                      <div className="space-y-2 pt-2">
+                        <span className="text-[11px] font-bold uppercase text-muted tracking-wider block">
+                          Verified Technical Competencies ({uploadedResume.extractedSkills.length}):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                          {uploadedResume.extractedSkills.slice(0, 20).map((skill, idx) => {
                             const palette = [
-                              "bg-sky-50 text-sky-900 border-sky-300 hover:border-sky-400 hover:bg-sky-100",
-                              "bg-emerald-50 text-emerald-900 border-emerald-300 hover:border-emerald-400 hover:bg-emerald-100",
-                              "bg-amber-50 text-amber-900 border-amber-300 hover:border-amber-400 hover:bg-amber-100",
-                              "bg-teal-50 text-teal-900 border-teal-300 hover:border-teal-400 hover:bg-teal-100",
-                              "bg-orange-50 text-orange-900 border-orange-300 hover:border-orange-400 hover:bg-orange-100",
+                              "bg-sky-50 text-sky-900 border-sky-300",
+                              "bg-emerald-50 text-emerald-900 border-emerald-300",
+                              "bg-amber-50 text-amber-900 border-amber-300",
+                              "bg-teal-50 text-teal-900 border-teal-300",
+                              "bg-orange-50 text-orange-900 border-orange-300",
                             ];
                             return (
                               <span
                                 key={skill}
-                                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border shadow-xs transition-all ${palette[idx % palette.length]}`}
+                                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-xs ${
+                                  palette[idx % palette.length]
+                                }`}
                               >
                                 {skill}
                               </span>
@@ -832,68 +835,17 @@ export default function CounselPage() {
                 )}
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-200/60">
-                <button
-                  type="button"
-                  onClick={handleContinueFromResume}
-                  disabled={!uploadedResume || uploadingResume}
-                  className="btn-teal px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md flex items-center gap-2"
-                >
-                  <span>Continue to LinkedIn Profile →</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Side Guidance & Intel (5 cols) */}
-            <div className="lg:col-span-5 space-y-5">
-              <div className="neo-card p-6 space-y-4 border border-teal-500/30 bg-gradient-to-br from-white/95 via-teal-50/25 to-emerald-50/20 shadow-md shadow-teal-900/5">
-                <div className="flex items-center gap-2">
-                  <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">Extraction Engine</span>
-                  <span className="text-xs font-bold text-ink">What We Extract</span>
+              {uploadedResume && (
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleContinueFromResume}
+                    className="btn-teal w-full sm:w-auto px-8 py-3 text-xs font-bold uppercase tracking-wider shadow-md active:scale-[0.97] flex items-center justify-center gap-2"
+                  >
+                    <span>Continue to LinkedIn Profile →</span>
+                  </button>
                 </div>
-                <div className="space-y-3 text-xs text-muted">
-                  <div className="p-3.5 rounded-xl border border-teal-200/80 bg-gradient-to-r from-teal-50/90 via-white to-emerald-50/40 space-y-1 shadow-xs">
-                    <p className="font-bold text-teal-950 flex items-center gap-1.5">
-                      <span className="text-base">🛠️</span> Core Tech Stack & Systems
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Languages, frameworks, data pipelines, cloud infra, and architectural patterns.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-white to-blue-50/40 space-y-1 shadow-xs">
-                    <p className="font-bold text-sky-950 flex items-center gap-1.5">
-                      <span className="text-base">📈</span> Business Scale & Scope
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Team size, cross-functional leadership, user throughput, and production traffic.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/40 space-y-1 shadow-xs">
-                    <p className="font-bold text-amber-950 flex items-center gap-1.5">
-                      <span className="text-base">🎯</span> Quantified Impact Metrics
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Latency drops, revenue acceleration, cost savings, and feature delivery speeds.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="neo-card p-5 space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted block">
-                  Candidate Privacy Guarantee
-                </span>
-                <div className="space-y-2 text-[11px] text-muted leading-relaxed">
-                  <p className="flex items-start gap-2">
-                    <span className="text-emerald-700 font-bold">🔒</span>
-                    <span>Your resume text is parsed in memory and saved to your isolated SQLite instance. Zero training data harvesting.</span>
-                  </p>
-                  <p className="flex items-start gap-2">
-                    <span className="text-teal-700 font-bold">🔑</span>
-                    <span>All AI inference runs through your OpenRouter / OpenAI BYOK vault or configured platform gateway.</span>
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -902,52 +854,39 @@ export default function CounselPage() {
         {/* SCREEN 2: ADD LINKEDIN PROFILE (SKIPPABLE)                           */}
         {/* ==================================================================== */}
         {currentStage === "linkedin" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-chat-in">
-            {/* Primary Action Card (7 cols) */}
-            <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
+          <div className="max-w-2xl mx-auto animate-chat-in">
+            <div className="neo-card p-8 sm:p-10 space-y-6 text-center">
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-600 to-blue-600 text-white flex items-center justify-center text-2xl shadow-md shadow-sky-600/20 shrink-0">
-                    💼
-                  </div>
-                  <div>
-                    <span className="badge-sky text-[10px] py-0.5 px-2 font-bold">Step 2 of 4 (Optional)</span>
-                    <h3 className="text-xl font-bold text-ink">Add Your LinkedIn Profile</h3>
-                  </div>
+                <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-600 to-blue-600 text-white flex items-center justify-center text-3xl shadow-lg shadow-sky-600/20 mb-2">
+                  💼
                 </div>
-                <p className="text-xs text-muted leading-relaxed">
-                  Connect your LinkedIn profile URL or paste your summary text to calibrate public
-                  seniority benchmarks and company pedigree. If you prefer to skip, you can proceed directly.
+                <span className="badge-sky text-[10px] py-0.5 px-2.5 font-bold uppercase tracking-wider">
+                  Step 2 of 4 • Public Profile
+                </span>
+                <h3 className="text-2xl font-black text-ink tracking-tight">Add Your LinkedIn Profile</h3>
+                <p className="text-xs text-muted max-w-md mx-auto">
+                  Calibrate company pedigree and public presence (optional). If you don&apos;t use LinkedIn, you can skip.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-                    LinkedIn URL or About Summary
-                  </label>
+              <div className="space-y-4 max-w-lg mx-auto text-left">
+                <div className="relative">
                   <input
                     type="text"
                     value={linkedinInput}
                     onChange={(e) => setLinkedinInput(e.target.value)}
                     placeholder="https://www.linkedin.com/in/your-profile"
-                    className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
+                    className="neo-inset w-full px-4 py-3.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-sky-500/30 rounded-xl"
                   />
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-sky-50/70 border border-sky-200 text-[11px] text-sky-950 leading-relaxed shadow-xs">
-                  💡 <span className="font-bold text-sky-900">Why add LinkedIn?</span> Gives Scout
-                  context on your public presence and company pedigree to craft personalized recruiter
-                  pitch angles and verify market presence.
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-slate-200/60 max-w-lg mx-auto">
                 <button
                   type="button"
                   onClick={() => handleSaveLinkedin(true)}
                   disabled={savingLinkedin}
-                  className="neo-raised px-6 py-2.5 text-xs font-semibold text-muted hover:text-ink rounded-xl"
+                  className="w-full sm:w-auto neo-raised px-6 py-3 text-xs font-semibold text-muted hover:text-ink rounded-xl active:scale-[0.97]"
                 >
                   Skip for now →
                 </button>
@@ -955,47 +894,11 @@ export default function CounselPage() {
                 <button
                   type="button"
                   onClick={() => handleSaveLinkedin(false)}
-                  disabled={savingLinkedin}
-                  className="btn-sky px-8 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md"
+                  disabled={savingLinkedin || !linkedinInput.trim()}
+                  className="w-full sm:w-auto btn-sky px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md active:scale-[0.97]"
                 >
                   {savingLinkedin ? "Saving..." : "Save & Continue →"}
                 </button>
-              </div>
-            </div>
-
-            {/* Side Guidance & Intel (5 cols) */}
-            <div className="lg:col-span-5 space-y-5">
-              <div className="neo-card p-6 space-y-4 border border-sky-500/30 bg-gradient-to-br from-white/95 via-sky-50/30 to-blue-50/20 shadow-md shadow-sky-900/5">
-                <div className="flex items-center gap-2">
-                  <span className="badge-sky text-[10px] py-0.5 px-2 font-bold">Candidate Positioning</span>
-                  <span className="text-xs font-bold text-ink">Public Signal Calibration</span>
-                </div>
-                <div className="space-y-3 text-xs text-muted">
-                  <div className="p-3.5 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-white to-blue-50/40 space-y-1 shadow-xs">
-                    <p className="font-bold text-sky-950 flex items-center gap-1.5">
-                      <span className="text-base">🌐</span> Public Pedigree & Tenure
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Calibrates organizational hierarchy, company prestige, and career progression speed.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-teal-200/80 bg-gradient-to-r from-teal-50/90 via-white to-sky-50/40 space-y-1 shadow-xs">
-                    <p className="font-bold text-teal-950 flex items-center gap-1.5">
-                      <span className="text-base">✉️</span> Recruiter Outreach Vectoring
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Scout creates high-converting outreach copy highlighting mutual connections and company backgrounds.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-white to-orange-50/40 space-y-1 shadow-xs">
-                    <p className="font-bold text-amber-950 flex items-center gap-1.5">
-                      <span className="text-base">⚡</span> 100% Optional
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      If you don't use LinkedIn or prefer not to share, skip with no penalty. Your resume is sufficient.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1005,57 +908,107 @@ export default function CounselPage() {
         {/* SCREEN 3: TARGET MARKET ROLES (SEARCH BAR + DROPDOWN, MAX 3)         */}
         {/* ==================================================================== */}
         {currentStage === "target_jobs" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-chat-in">
-            {/* Primary Search & Selection Card (7 cols) */}
-            <div className="lg:col-span-7 neo-card p-6 sm:p-8 space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-center text-2xl shadow-md shadow-amber-600/20 shrink-0">
-                    🎯
-                  </div>
-                  <div>
-                    <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">Step 3 of 4</span>
-                    <h3 className="text-xl font-bold text-ink">What kind of job are you looking for?</h3>
-                  </div>
+          <div className="max-w-3xl mx-auto animate-chat-in">
+            <div className="neo-card p-8 sm:p-10 space-y-6">
+              <div className="text-center space-y-2">
+                <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-600/20 mb-2">
+                  🎯
                 </div>
-                <p className="text-xs text-muted leading-relaxed">
-                  Search market roles below and select <strong>up to 3 target jobs</strong>. Your top selection will be designated as your #1 Priority Role (1.5× Scout search weighting).
+                <span className="badge-amber text-[10px] py-0.5 px-2.5 font-bold uppercase tracking-wider">
+                  Step 3 of 4 • Target Market Roles
+                </span>
+                <h3 className="text-2xl font-black text-ink tracking-tight">
+                  What kind of job are you looking for?
+                </h3>
+                <p className="text-xs text-muted max-w-md mx-auto">
+                  Select up to 3 target market roles. Your first selection will be your #1 Priority Role.
                 </p>
               </div>
 
-              {/* Search Bar + Live Dropdown */}
-              <div className="space-y-2 relative">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted">
-                  Search Roles in Market:
-                </label>
+              {/* 3 Visual Role Slots */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[0, 1, 2].map((slotIdx) => {
+                  const roleId = selectedRoleIds[slotIdx];
+                  const catalogMatch = catalogRoles.find((r) => r.id === roleId);
+                  const title =
+                    catalogMatch?.title ||
+                    (roleId ? roleId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null);
+                  const isPriority = slotIdx === 0;
 
-                <div className="relative">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={roleSearchQuery}
-                    onFocus={() => setIsRoleDropdownOpen(true)}
-                    onChange={(e) => {
-                      setRoleSearchQuery(e.target.value);
-                      setIsRoleDropdownOpen(true);
-                    }}
-                    placeholder="Type to search roles (e.g. Backend, Full Stack, AI, Manager)..."
-                    className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
-                  />
-
-                  {roleSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRoleSearchQuery("");
-                        setIsRoleDropdownOpen(false);
-                      }}
-                      className="absolute right-3 top-3 text-xs text-muted hover:text-ink"
+                  return (
+                    <div
+                      key={slotIdx}
+                      className={`p-4 rounded-xl border transition-all min-h-[90px] flex flex-col justify-between ${
+                        roleId
+                          ? isPriority
+                            ? "bg-gradient-to-br from-amber-50/90 to-orange-50/40 border-amber-400/90 shadow-sm"
+                            : "bg-white/90 border-teal-300/80 shadow-xs"
+                          : "border-dashed border-slate-300 bg-slate-50/40 items-center justify-center text-center text-muted"
+                      }`}
                     >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                      {roleId ? (
+                        <>
+                          <div className="flex items-start justify-between gap-1">
+                            <span
+                              className={`text-[10px] font-bold uppercase py-0.5 px-2 rounded-md ${
+                                isPriority
+                                  ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                  : "bg-teal-100 text-teal-900 border border-teal-300"
+                              }`}
+                            >
+                              {isPriority ? "⭐ #1 Priority" : `Slot ${slotIdx + 1}`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRole(roleId)}
+                              className="text-muted hover:text-rose-600 text-xs font-bold px-1"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <p className="text-xs font-bold text-ink mt-2 leading-snug line-clamp-2">
+                            {title}
+                          </p>
+                        </>
+                      ) : (
+                        <div className="py-2">
+                          <span className="text-[11px] font-medium text-slate-400">
+                            {slotIdx === 0 ? "+ Slot 1 (Priority)" : `+ Slot ${slotIdx + 1}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Search Bar + Dropdown */}
+              <div className="relative">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={roleSearchQuery}
+                  onFocus={() => setIsRoleDropdownOpen(true)}
+                  onChange={(e) => {
+                    setRoleSearchQuery(e.target.value);
+                    setIsRoleDropdownOpen(true);
+                  }}
+                  placeholder="Type to search roles (e.g. Backend, Full Stack, AI Systems, Manager)..."
+                  className="neo-inset w-full px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                />
+
+                {roleSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoleSearchQuery("");
+                      setIsRoleDropdownOpen(false);
+                    }}
+                    className="absolute right-3 top-3 text-xs text-muted hover:text-ink"
+                  >
+                    ✕
+                  </button>
+                )}
 
                 {/* Dropdown Menu */}
                 {isRoleDropdownOpen && (
@@ -1104,8 +1057,8 @@ export default function CounselPage() {
 
               {/* Quick Popular Suggestions */}
               <div className="space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                  Popular In-Demand Tech Roles:
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted block">
+                  Quick Add In-Demand Tech Roles:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -1145,100 +1098,12 @@ export default function CounselPage() {
                   type="button"
                   onClick={handleSaveTargetRoles}
                   disabled={selectedRoleIds.length === 0 || savingRoles}
-                  className="btn-teal px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md flex items-center gap-2"
+                  className="btn-teal w-full sm:w-auto px-8 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-md active:scale-[0.97] flex items-center justify-center gap-2"
                 >
                   <span>
-                    {savingRoles ? "Saving Target Roles..." : "Proceed to Job Matches & Preferences →"}
+                    {savingRoles ? "Saving Roles..." : "Proceed to Career Counselor →"}
                   </span>
                 </button>
-              </div>
-            </div>
-
-            {/* Selected Roles & Scout Weighting (5 cols) */}
-            <div className="lg:col-span-5 space-y-5">
-              <div className="neo-card p-6 space-y-4 border border-amber-500/30 bg-gradient-to-br from-white/95 via-amber-50/25 to-orange-50/20 shadow-md shadow-amber-900/5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">Selected</span>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
-                      Target Roles ({selectedRoleIds.length}/3 max)
-                    </h4>
-                  </div>
-                  {selectedRoleIds.length === 3 ? (
-                    <span className="badge-emerald text-[10px] py-0.5 px-2 font-bold">3/3 Max Slots</span>
-                  ) : (
-                    <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">{selectedRoleIds.length}/3 Filled</span>
-                  )}
-                </div>
-
-                {selectedRoleIds.length === 0 ? (
-                  <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-muted space-y-2">
-                    <p className="text-xl">🎯</p>
-                    <p className="font-semibold text-slate-700">No roles selected yet.</p>
-                    <p className="text-[11px]">Use the search bar or popular chips on the left to add up to 3 market roles.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {selectedRoleIds.map((roleId, idx) => {
-                      const catalogMatch = catalogRoles.find((r) => r.id === roleId);
-                      const title =
-                        catalogMatch?.title ||
-                        roleId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                      const isPriority = idx === 0;
-
-                      return (
-                        <div
-                          key={roleId}
-                          className={`p-3.5 rounded-xl flex items-center justify-between border transition-all ${
-                            isPriority
-                              ? "bg-gradient-to-r from-amber-50/95 via-orange-50/50 to-white border-amber-400/90 shadow-md shadow-amber-500/10"
-                              : "bg-white/80 border-slate-200/90 hover:border-slate-300"
-                          }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              {isPriority ? (
-                                <span className="badge-amber text-[10px] py-0.5 px-2 font-bold">
-                                  ⭐ #1 Priority (1.5× Weight)
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleMakePriority(roleId)}
-                                  className="text-[10px] text-teal-700 hover:text-teal-900 underline font-semibold"
-                                >
-                                  Make Priority #1
-                                </button>
-                              )}
-                            </div>
-                            <p className="text-xs font-bold text-ink">{title}</p>
-                            {catalogMatch?.family && (
-                              <p className="text-[10px] text-muted">{catalogMatch.family}</p>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveRole(roleId)}
-                            className="text-xs text-rose-600 hover:text-rose-800 font-bold px-2 py-1 rounded-md"
-                            title="Remove role"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="p-3.5 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/40 text-[11px] text-slate-700 leading-relaxed space-y-1 shadow-xs">
-                  <p className="font-bold text-amber-950 flex items-center gap-1.5">
-                    <span>⚡</span> Scout Search Weighting:
-                  </p>
-                  <p>
-                    Your #1 priority role directs 60% of autonomous ATS scrapers and auto-tailors your primary CV. Secondary roles receive opportunistic coverage.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
@@ -1247,422 +1112,228 @@ export default function CounselPage() {
         {/* ==================================================================== */}
         {/* SCREEN 4: EXPERT CAREER DIAGNOSIS, PREFERENCES & OPTIONAL CHAT       */}
         {/* ==================================================================== */}
+        {/* ==================================================================== */}
+        {/* SCREEN 4: EXPERT CAREER COUNSELOR & LIVE PERSONA ADVICE              */}
+        {/* ==================================================================== */}
         {currentStage === "live_chat" && (
-          <div className="space-y-6 animate-chat-in">
-            {/* Top Section: Expert Career Counsellor Job Matches Diagnosis */}
-            <div className="neo-card p-6 space-y-4 border border-teal-500/30 bg-gradient-to-br from-white/90 via-teal-50/20 to-cyan-50/20 shadow-md">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+          <div className="max-w-4xl mx-auto space-y-6 animate-chat-in">
+            {/* Top Bar with Instant Skip */}
+            <div className="neo-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-teal-500/30 bg-gradient-to-r from-teal-50/50 via-white to-sky-50/40">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-600 via-emerald-600 to-sky-600 text-white flex items-center justify-center text-2xl shadow-md">
+                  🧭
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold">
-                      ⭐ Expert Diagnosis
+                    <span className="badge-teal text-[10px] py-0.5 px-2 font-bold uppercase tracking-wider">
+                      Step 4 of 4 • Career Counselor
                     </span>
-                    <span className="text-xs text-muted font-medium">
-                      AI Career Counsellor • Best Opportunities Identified
-                    </span>
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
-                  <h3 className="text-base font-bold text-ink mt-1">
-                    Top 3 Market Job Fits Identified For You
-                  </h3>
-                  <p className="text-xs text-muted">
-                    Diagnosed from your uploaded resume (
-                    {persona.extractedSkills.length || uploadedResume?.skillsCount || 0} skills
-                    verified) and market hiring velocity:
-                  </p>
+                  <h3 className="text-lg font-bold text-ink">Personalized Job Matches & Advisory</h3>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleFinalizePersona}
-                  disabled={finalizingPersona}
-                  className="btn-teal px-6 py-2.5 text-xs font-bold uppercase tracking-wider shadow-md shrink-0"
-                >
-                  {finalizingPersona ? "Finalizing..." : "Confirm & Scout These Jobs →"}
-                </button>
               </div>
 
-              {/* 3 Job Match Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {diagnosisRoles.slice(0, 3).map((rId, idx) => {
-                  const match = catalogRoles.find((r) => r.id === rId);
-                  const title =
-                    match?.title || rId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                  const matchScore = idx === 0 ? "96%" : idx === 1 ? "91%" : "86%";
-                  const roleRank =
-                    idx === 0 ? "Primary Target (#1 Focus)" : idx === 1 ? "Secondary Complement" : "Growth Opportunity";
-                  const salaryBand =
-                    idx === 0
-                      ? "$190k - $250k • Staff Tier"
-                      : idx === 1
-                      ? "$175k - $225k • Senior Tier"
-                      : "$180k - $235k • Specialized";
+              <button
+                type="button"
+                onClick={handleFinalizePersona}
+                disabled={finalizingPersona}
+                className="btn-amber w-full sm:w-auto px-6 py-2.5 text-xs font-bold uppercase tracking-wider shadow-md active:scale-[0.97] flex items-center justify-center gap-2 shrink-0"
+              >
+                <span>{finalizingPersona ? "Finalizing..." : "Skip Chat & Scout Jobs ⚡ →"}</span>
+              </button>
+            </div>
 
-                  const tierStyles = [
-                    {
-                      border: "border-emerald-500/70 ring-1 ring-emerald-500/20 shadow-md shadow-emerald-700/10 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40",
-                      badge: "badge-emerald",
-                      rankBadge: "badge-emerald",
-                      salaryColor: "text-emerald-800",
-                      verifiedColor: "text-emerald-700",
-                      pulseDot: "bg-emerald-500",
-                    },
-                    {
-                      border: "border-sky-500/70 ring-1 ring-sky-500/20 shadow-md shadow-sky-700/10 bg-gradient-to-br from-sky-50/70 via-white to-cyan-50/40",
-                      badge: "badge-sky",
-                      rankBadge: "badge-sky",
-                      salaryColor: "text-sky-800",
-                      verifiedColor: "text-sky-700",
-                      pulseDot: "bg-sky-500",
-                    },
-                    {
-                      border: "border-amber-500/70 ring-1 ring-amber-500/20 shadow-md shadow-amber-700/10 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40",
-                      badge: "badge-amber",
-                      rankBadge: "badge-amber",
-                      salaryColor: "text-amber-800",
-                      verifiedColor: "text-amber-700",
-                      pulseDot: "bg-amber-500",
-                    },
-                  ];
+            {/* Top 3 Diagnosed Market Job Fits */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {diagnosisRoles.slice(0, 3).map((rId, idx) => {
+                const match = catalogRoles.find((r) => r.id === rId);
+                const title =
+                  match?.title || rId.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                const matchScore = idx === 0 ? "96%" : idx === 1 ? "91%" : "86%";
+                const roleRank =
+                  idx === 0 ? "Primary Target" : idx === 1 ? "Secondary" : "Growth Opportunity";
+                const salaryBand =
+                  idx === 0
+                    ? "$190k - $250k"
+                    : idx === 1
+                    ? "$175k - $225k"
+                    : "$180k - $235k";
 
-                  const tier = tierStyles[idx] || tierStyles[0];
+                const tierStyles = [
+                  {
+                    border: "border-emerald-500/70 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40",
+                    badge: "badge-emerald",
+                    rankBadge: "badge-emerald",
+                    salaryColor: "text-emerald-800",
+                    pulseDot: "bg-emerald-500",
+                  },
+                  {
+                    border: "border-sky-500/70 bg-gradient-to-br from-sky-50/70 via-white to-cyan-50/40",
+                    badge: "badge-sky",
+                    rankBadge: "badge-sky",
+                    salaryColor: "text-sky-800",
+                    pulseDot: "bg-sky-500",
+                  },
+                  {
+                    border: "border-amber-500/70 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40",
+                    badge: "badge-amber",
+                    rankBadge: "badge-amber",
+                    salaryColor: "text-amber-800",
+                    pulseDot: "bg-amber-500",
+                  },
+                ];
 
-                  return (
-                    <div
-                      key={rId}
-                      className={`p-5 rounded-2xl space-y-3 border transition-all ${tier.border}`}
-                    >
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className={`${tier.rankBadge} font-bold py-0.5 px-2.5`}>{roleRank}</span>
-                        <span className={`${tier.badge} py-0.5 px-2.5 font-black flex items-center gap-1.5`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${tier.pulseDot} animate-pulse`} />
-                          {matchScore} Fit
-                        </span>
-                      </div>
+                const tier = tierStyles[idx] || tierStyles[0];
 
-                      <h4 className="text-base font-black text-ink leading-snug">{title}</h4>
-
-                      <div className="text-xs text-muted space-y-1.5 bg-white/70 p-3 rounded-xl border border-slate-200/50">
-                        <p>
-                          <span className="font-semibold text-slate-700">Market Demand:</span>{" "}
-                          <span className="text-teal-800 font-semibold">High velocity</span>
-                        </p>
-                        <p>
-                          <span className="font-semibold text-slate-700">Estimated Band:</span>{" "}
-                          <span className={`${tier.salaryColor} font-bold`}>{salaryBand}</span>
-                        </p>
-                      </div>
-
-                      <div className={`text-[11px] ${tier.verifiedColor} pt-0.5 font-semibold flex items-center gap-1`}>
-                        <span>✓ Verified by Career Counsellor</span>
-                      </div>
+                return (
+                  <div
+                    key={rId}
+                    className={`p-5 rounded-2xl space-y-2.5 border shadow-sm transition-all ${tier.border}`}
+                  >
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`${tier.rankBadge} font-bold py-0.5 px-2`}>{roleRank}</span>
+                      <span className={`${tier.badge} py-0.5 px-2 font-black flex items-center gap-1`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${tier.pulseDot} animate-pulse`} />
+                        {matchScore} Fit
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
+
+                    <h4 className="text-sm font-black text-ink leading-snug">{title}</h4>
+
+                    <div className="text-[11px] text-muted flex items-center justify-between pt-1 border-t border-slate-200/50">
+                      <span>Target Band:</span>
+                      <span className={`${tier.salaryColor} font-bold`}>{salaryBand}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Middle Section: Quick 1-Click Search Preferences (No endless chat needed!) */}
-            <div className="neo-card p-6 space-y-5 border border-white/80 bg-white/70 backdrop-blur-md shadow-md">
-              <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
-                    Profile Search Preferences
-                  </h3>
-                  <p className="text-xs text-muted">
-                    Quickly toggle your search criteria below. Everything auto-saves without needing
-                    to chat.
-                  </p>
-                </div>
-                {prefsSavedFeedback && (
-                  <span className="badge-emerald text-[11px] py-1 px-3 animate-pulse shadow-xs">
-                    ✓ Preferences auto-saved
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 1. Work Arrangement */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-teal-900">
-                    Work Arrangement Preference
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Remote Only", "Hybrid (1-2 days)", "On-site / Flexible"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setWorkArrangement(opt);
-                          persistPreferences({ workArrangement: opt });
-                        }}
-                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
-                          workArrangement === opt
-                            ? "bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs ring-1 ring-teal-400/30"
-                            : "neo-raised text-ink hover:text-teal-800 hover:border-teal-300/60"
-                        }`}
-                      >
-                        {workArrangement === opt ? `✓ ${opt}` : opt}
-                      </button>
-                    ))}
+            {/* Live Interactive Counselor Chat */}
+            <div className="neo-card p-6 space-y-4 border border-teal-500/20 bg-white/95">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                    AI
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+                      Career Counselor Session
+                    </h4>
+                    <p className="text-[11px] text-muted">
+                      Calibrating company tier, team scope, and search boundaries.
+                    </p>
                   </div>
                 </div>
-
-                {/* 2. Target Tech Hubs */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-sky-900">
-                    Target Location & Timezones
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "US Remote / Tech Hubs",
-                      "Global Remote",
-                      "San Francisco / Bay Area",
-                      "New York City",
-                      "London / Europe",
-                      "Bengaluru / India",
-                    ].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setTargetLocation(opt);
-                          persistPreferences({ targetLocation: opt });
-                        }}
-                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
-                          targetLocation === opt
-                            ? "bg-sky-50 border-sky-500 text-sky-950 font-bold shadow-xs ring-1 ring-sky-400/30"
-                            : "neo-raised text-ink hover:text-sky-800 hover:border-sky-300/60"
-                        }`}
-                      >
-                        {targetLocation === opt ? `✓ ${opt}` : opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Work Authorization */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-emerald-900">
-                    Work Authorization Status
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Authorized (No Sponsorship Required)",
-                      "Requires Visa Sponsorship (H-1B, etc.)",
-                      "Open to Independent Contractor / B2B",
-                    ].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setAuthorization(opt);
-                          persistPreferences({ authorization: opt });
-                        }}
-                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
-                          authorization === opt
-                            ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs ring-1 ring-emerald-400/30"
-                            : "neo-raised text-ink hover:text-emerald-800 hover:border-emerald-300/60"
-                        }`}
-                      >
-                        {authorization === opt ? `✓ ${opt}` : opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. Career Track */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-900">
-                    Career Track Scope
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { key: "ic", label: "Senior / Staff IC (Pure Engineering)" },
-                      { key: "lead", label: "Engineering Manager / Squad Lead" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        onClick={() => {
-                          const track = opt.key as "ic" | "lead";
-                          setLeadershipTrack(track);
-                          persistPreferences({ leadershipTrack: track });
-                        }}
-                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
-                          leadershipTrack === opt.key
-                            ? "bg-amber-50 border-amber-500 text-amber-950 font-bold shadow-xs ring-1 ring-amber-400/30"
-                            : "neo-raised text-ink hover:text-amber-800 hover:border-amber-300/60"
-                        }`}
-                      >
-                        {leadershipTrack === opt.key ? `✓ ${opt.label}` : opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <span className="badge-teal text-[10px] py-0.5 px-2">Live Counselor</span>
               </div>
 
-              {/* 5. Dealbreakers to Filter Out */}
-              <div className="space-y-2 pt-3 border-t border-slate-200/70">
-                <label className="block text-xs font-bold uppercase tracking-wider text-rose-900">
-                  Dealbreakers to Filter Out from Scout Matches:
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Legacy Monolithic Codebases",
-                    "Uncompensated 24/7 On-Call Rotations",
-                    "Excessive Meeting Overhead",
-                    "Early Pre-Seed Instability",
-                    "Mandatory 5-Day Office Requirements",
-                  ].map((dbItem) => {
-                    const isSelected = selectedDealbreakers.includes(dbItem);
-                    return (
-                      <button
-                        key={dbItem}
-                        type="button"
-                        onClick={() => toggleDealbreaker(dbItem)}
-                        className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all ${
-                          isSelected
-                            ? "bg-rose-50 border-rose-400 text-rose-800 font-bold shadow-xs ring-1 ring-rose-300/40"
-                            : "neo-raised text-muted hover:text-rose-700 hover:border-rose-300/50"
-                        }`}
-                      >
-                        {isSelected ? `🚫 Filter out: ${dbItem}` : `+ ${dbItem}`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Section: Optional Advisory Chat & Final Confirmation */}
-            <div className="neo-card p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
-                    Ask Career Counsellor Anything (Optional)
-                  </h4>
-                  <p className="text-xs text-muted">
-                    Have questions about negotiation, interview expectations, or role positioning?
-                    Ask below.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsChatExpanded(!isChatExpanded)}
-                  className="text-xs font-semibold text-teal-700 hover:text-teal-900 underline"
-                >
-                  {isChatExpanded ? "Hide Advisor Chat ▲" : "Open Advisor Chat ▼"}
-                </button>
-              </div>
-
-              {/* Collapsible Advisory Chat Thread */}
-              {isChatExpanded && (
-                <div className="space-y-4 pt-2 border-t border-slate-200/80 animate-chat-in">
-                  <div className="max-h-72 overflow-y-auto space-y-3 p-3 rounded-xl bg-slate-50/60 border border-slate-200/60">
-                    {chatMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex items-start gap-2 ${
-                          msg.role === "user" ? "justify-end ml-auto max-w-lg" : "max-w-lg"
-                        }`}
-                      >
-                        {msg.role === "assistant" && (
-                          <div className="h-7 w-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                            AI
-                          </div>
-                        )}
-                        <div
-                          className={`p-3 rounded-xl text-xs leading-relaxed ${
-                            msg.role === "user"
-                              ? "bg-teal-700 text-white"
-                              : "bg-white text-ink border border-slate-200"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {isAiTyping && (
-                      <div className="text-[11px] text-teal-700 animate-pulse pl-9">
-                        Counsellor is typing strategic advice...
+              {/* Chat Thread */}
+              <div className="max-h-80 overflow-y-auto space-y-3 p-4 rounded-xl bg-slate-50/70 border border-slate-200/60">
+                {chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex items-start gap-2.5 ${
+                      msg.role === "user" ? "justify-end ml-auto max-w-md" : "max-w-md"
+                    }`}
+                  >
+                    {msg.role === "assistant" && (
+                      <div className="h-7 w-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5 shadow-xs">
+                        AI
                       </div>
                     )}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  {/* Advisory Prompt Chips */}
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { text: "💬 What skills are most in demand for Staff Backend roles right now?", style: "bg-sky-50 text-sky-900 border-sky-300/80 hover:bg-sky-100" },
-                      { text: "💬 How should I position my resume for remote engineering teams?", style: "bg-emerald-50 text-emerald-900 border-emerald-300/80 hover:bg-emerald-100" },
-                      { text: "💬 What are current market base salary expectations?", style: "bg-amber-50 text-amber-900 border-amber-300/80 hover:bg-amber-100" },
-                    ].map((chip) => (
-                      <button
-                        key={chip.text}
-                        type="button"
-                        onClick={() => handleSendChatMessage(chip.text)}
-                        className={`px-3 py-1.5 text-[11px] font-semibold rounded-xl border shadow-xs text-left transition-all hover:-translate-y-0.5 ${chip.style}`}
-                      >
-                        {chip.text}
-                      </button>
-                    ))}
-                  </div>
-
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleSendChatMessage();
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <input
-                      type="text"
-                      value={chatInputText}
-                      onChange={(e) => setChatInputText(e.target.value)}
-                      placeholder="Ask your career advisor anything about your search..."
-                      className="neo-inset flex-1 px-4 py-2.5 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={handleVoiceInput}
-                      disabled={listening || sendingChat}
-                      className={`px-3 py-2.5 text-xs rounded-xl flex items-center justify-center ${
-                        listening ? "bg-rose-100 text-rose-700 animate-pulse" : "neo-raised text-ink"
+                    <div
+                      className={`p-3.5 rounded-xl text-xs leading-relaxed ${
+                        msg.role === "user"
+                          ? "bg-teal-700 text-white shadow-xs"
+                          : "bg-white text-ink border border-slate-200/80 shadow-xs"
                       }`}
-                      title="Dictate via microphone"
                     >
-                      🎙️
-                    </button>
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {isAiTyping && (
+                  <div className="text-[11px] text-teal-700 animate-pulse pl-9 flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-teal-600 animate-ping" />
+                    <span>Counselor is typing strategic guidance...</span>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
 
-                    <button
-                      type="submit"
-                      disabled={sendingChat || !chatInputText.trim()}
-                      className="btn-teal px-5 py-2.5 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
-                    >
-                      {sendingChat ? "Sending..." : "Ask →"}
-                    </button>
-                  </form>
-                </div>
-              )}
+              {/* Quick Reply Suggestion Chips */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { text: "🚀 Fast-paced VC Startup", style: "bg-sky-50 text-sky-900 border-sky-300 hover:bg-sky-100" },
+                  { text: "🏢 High-scale Public Tech", style: "bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100" },
+                  { text: "🌍 100% Async Remote-First", style: "bg-teal-50 text-teal-900 border-teal-300 hover:bg-teal-100" },
+                  { text: "💰 Maximize Base Salary & Equity", style: "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100" },
+                ].map((chip) => (
+                  <button
+                    key={chip.text}
+                    type="button"
+                    onClick={() => handleSendChatMessage(chip.text)}
+                    className={`px-3 py-1.5 text-[11px] font-bold rounded-xl border shadow-xs transition-all active:scale-[0.97] ${chip.style}`}
+                  >
+                    {chip.text}
+                  </button>
+                ))}
+              </div>
 
-              {/* Big Prominent Launch Action */}
-              <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Chat Input Bar */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendChatMessage();
+                }}
+                className="flex items-center gap-2 pt-2"
+              >
+                <input
+                  type="text"
+                  value={chatInputText}
+                  onChange={(e) => setChatInputText(e.target.value)}
+                  placeholder="Tell counselor about your ideal role, culture, or compensation..."
+                  className="neo-inset flex-1 px-4 py-3 text-xs text-ink bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded-xl"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleVoiceInput}
+                  disabled={listening || sendingChat}
+                  className={`px-3 py-3 text-xs rounded-xl flex items-center justify-center transition-all ${
+                    listening ? "bg-rose-100 text-rose-700 animate-pulse" : "neo-raised text-ink hover:text-teal-700"
+                  }`}
+                  title="Dictate via microphone"
+                >
+                  🎙️
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={sendingChat || !chatInputText.trim()}
+                  className="btn-teal px-6 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50 active:scale-[0.97]"
+                >
+                  {sendingChat ? "Sending..." : "Send →"}
+                </button>
+              </form>
+
+              {/* Bottom Confirm Action */}
+              <div className="pt-4 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-xs text-muted">
-                  Ready to proceed? Autonomous Scout will match live job vacancies against this
-                  profile.
+                  Ready to scout? You can launch automated job scouting now.
                 </p>
 
                 <button
                   type="button"
                   onClick={handleFinalizePersona}
                   disabled={finalizingPersona}
-                  className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-500 hover:via-emerald-500 hover:to-teal-600 text-white px-10 py-3.5 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-teal-700/25 hover:shadow-xl hover:shadow-teal-700/35 transition-all active:scale-[0.97]"
+                  className="btn-teal w-full sm:w-auto px-8 py-3 text-xs font-bold uppercase tracking-wider shadow-md active:scale-[0.97]"
                 >
                   {finalizingPersona
                     ? "Launching Scout..."
-                    : "Launch Autonomous Scout for These Jobs →"}
+                    : "Confirm & Scout My Jobs →"}
                 </button>
               </div>
             </div>
