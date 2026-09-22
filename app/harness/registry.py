@@ -133,3 +133,61 @@ registry.register(
         handler=_outreach_send,
     )
 )
+
+async def _tool_connect_mailbox(tenant_id: str, email_address: str, access_token: str, refresh_token: str, provider: str = "gmail", **kwargs):
+    from app.core.database import async_session_factory
+    from app.mcp.tools import connect_mailbox
+    async with async_session_factory() as session:
+        return await connect_mailbox(tenant_id=tenant_id, session=session, email_address=email_address, access_token=access_token, refresh_token=refresh_token, provider=provider)
+
+async def _tool_grant_send_consent(tenant_id: str, **kwargs):
+    from app.core.database import async_session_factory
+    from app.mcp.tools import grant_send_consent
+    async with async_session_factory() as session:
+        return await grant_send_consent(tenant_id=tenant_id, session=session)
+
+async def _tool_queue_recruiter_email(tenant_id: str, recipient: str, subject: str, body: str, **kwargs):
+    from app.core.database import async_session_factory
+    from app.mcp.tools import queue_recruiter_email
+    async with async_session_factory() as session:
+        return await queue_recruiter_email(tenant_id=tenant_id, session=session, recipient=recipient, subject=subject, body=body)
+
+registry.register(
+    Tool(
+        meta=ToolMetadata(
+            name="connect_mailbox",
+            description="Connects candidate's mailbox with OAuth credentials.",
+            permission_scope="connect:mailbox",
+            external=False,
+            gate_required=False,
+        ),
+        handler=_tool_connect_mailbox,
+    )
+)
+
+registry.register(
+    Tool(
+        meta=ToolMetadata(
+            name="grant_send_consent",
+            description="Grants explicit outreach email consent.",
+            permission_scope="consent:outreach",
+            external=False,
+            gate_required=False,
+        ),
+        handler=_tool_grant_send_consent,
+    )
+)
+
+registry.register(
+    Tool(
+        meta=ToolMetadata(
+            name="queue_recruiter_email",
+            description="Queues an outreach email to a recruiter from the posting.",
+            permission_scope="send:recruiter",
+            external=True,
+            gate_required=True,
+        ),
+        handler=_tool_queue_recruiter_email,
+    )
+)
+
