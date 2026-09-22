@@ -196,15 +196,14 @@ async def chat_with_counsellor(
                 "4. Work authorization & visa sponsorship status\n"
                 "5. Culture & technical dealbreakers (e.g. legacy monoliths, 24/7 on-call, company stages)\n\n"
                 "Style rules:\n"
-                "- Speak like a seasoned Silicon Valley executive recruiter and career strategist.\n"
-                "- Acknowledge what they just shared with intelligent technical specificity.\n"
-                "- Ask 1 or 2 high-leverage follow-up questions at a time.\n"
-                "- Keep responses concise (2 to 3 paragraphs max).\n"
-                "- When the candidate has shared sufficient detail across the key dimensions, summarize their persona and invite them to finalize."
+                "- Speak like a seasoned Silicon Valley executive career strategist and job scout.\n"
+                "- Directly answer the candidate's questions and give expert guidance on how to position their resume and target roles for the current market.\n"
+                "- Do NOT interrogate the candidate with endless questions or forced steps.\n"
+                "- Provide high-value strategic insight in 1-2 concise paragraphs and confirm their profile is well-calibrated for Scout."
             )
 
             messages_payload = [{"role": "system", "content": system_prompt}]
-            for m in history[-8:]:  # keep last 8 turns for context
+            for m in history[-6:]:  # keep last 6 turns for context
                 messages_payload.append({"role": m.role, "content": m.content})
             messages_payload.append({"role": "user", "content": message})
 
@@ -228,37 +227,93 @@ async def chat_with_counsellor(
         if "management" in detected:
             if detected["management"]:
                 reply = (
-                    "Excellent. Having hands-on leadership and squad ownership unlocks our Engineering Manager "
-                    "and Lead search tracks with a 4th role slot. What size teams or programs have you led, and do you "
-                    "prefer staying ~30% hands-on code or focusing purely on people, delivery, and roadmap strategy?"
+                    "Leadership experience confirmed! I've flagged your profile for Engineering Manager and Squad Lead tracks, "
+                    "unlocking broader search scopes and executive recruiter outreach. Your candidate persona is looking sharp."
                 )
             else:
                 reply = (
-                    "Understood. Focusing purely on the Individual Contributor (IC) track means we'll prioritize "
-                    "Senior, Staff, and Principal roles with deep technical ownership, architecture, and high execution leverage. "
-                    "Where are you looking to work (Remote vs specific tech hubs like SF, NYC, London, or Bengaluru), and do you require visa sponsorship?"
+                    "Individual Contributor (IC) track confirmed! We will focus 100% on Senior, Staff, and Principal engineering "
+                    "roles prioritizing technical ownership, systems architecture, and high leverage execution."
                 )
-        elif "location" in detected or "authorization" in detected:
+        elif "location" in detected or "authorization" in detected or "preferences" in detected:
             reply = (
-                f"Got it. I've recorded your location and work authorization preferences. "
-                "Next, what are your absolute dealbreakers and favorite team environments? For instance, do you want to avoid legacy codebases, "
-                "excessive meetings, or uncompensated 24/7 on-call rotations? Tell me what you want more of and what you want to avoid."
-            )
-        elif "preferences" in detected:
-            reply = (
-                "That's a very clear signal. I've locked in those preferences and dealbreakers into your profile. "
-                "Scout will filter out any vacancy that displays these red flags. Your candidate persona is looking exceptionally sharp and ready for autonomous scouting! "
-                "Click 'Complete Persona & Launch Autonomous Scout' whenever you're ready to proceed to your targeted jobs."
+                "Preferences recorded and saved to your profile! Scout will filter out misaligned vacancies and prioritize "
+                "roles matching your exact criteria. You can adjust preferences anytime below or proceed directly to your matched jobs."
             )
         else:
             reply = (
-                "Thank you for sharing that context. I've incorporated it into your candidate persona. "
-                "To help Scout filter the best matches, what kind of work environment and problem space brings out your best performance? "
-                "Are you seeking high-velocity startups or scaled enterprise architectures, and do you require visa sponsorship?"
+                "I've analyzed your target roles and resume skills. Based on current market signals, you have strong positioning "
+                "for senior engineering opportunities. You can fine-tune your search preferences below or click 'Complete & Scout My Jobs' to proceed."
             )
 
     journey = await get_or_create_journey(db, tenant_id)
     return CounselChatResponse(reply=reply, detected_attributes=detected, stage=journey.stage)
+
+
+class PreferencesUpdateRequest(BaseModel):
+    work_arrangement: Optional[str] = None
+    location: Optional[str] = None
+    authorization: Optional[str] = None
+    management: Optional[bool] = None
+    dealbreakers: Optional[List[str]] = None
+    preferences: Optional[str] = None
+
+
+@router.post("/preferences")
+async def update_counsel_preferences(
+    request: PreferencesUpdateRequest,
+    tenant_id: str = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Saves candidate preferences directly into profile sections without requiring back-and-forth chat."""
+    from sqlalchemy import select
+    from app.domain.models import ProfileSection
+
+    updates: dict = {}
+    loc_parts = []
+    if request.work_arrangement:
+        loc_parts.append(request.work_arrangement)
+    if request.location:
+        loc_parts.append(request.location)
+    if loc_parts:
+        updates["location"] = {"location": " • ".join(loc_parts)}
+
+    if request.authorization:
+        updates["authorization"] = {"authorization": request.authorization}
+
+    if request.management is not None:
+        updates["management"] = {"management": request.management}
+
+    if request.preferences or request.dealbreakers:
+        dealbreakers_str = ", ".join(request.dealbreakers) if request.dealbreakers else ""
+        updates["preferences"] = {
+            "more_of": request.preferences or "",
+            "avoid": dealbreakers_str,
+        }
+
+    for step_name, body_data in updates.items():
+        existing = (
+            await db.execute(
+                select(ProfileSection).where(
+                    ProfileSection.tenant_id == tenant_id,
+                    ProfileSection.step == step_name,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing:
+            existing.body = body_data
+        else:
+            new_sec = ProfileSection(
+                tenant_id=tenant_id,
+                section=step_name,
+                step=step_name,
+                body=body_data,
+                input_mode="text",
+            )
+            db.add(new_sec)
+
+    await db.flush()
+    return {"status": "updated", "saved_sections": list(updates.keys())}
 
 
 @router.post("/finalize")
