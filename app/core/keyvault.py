@@ -166,3 +166,4 @@ class KeyVaultService:
 
 
 keyvault = KeyVaultService()
+key_vault = keyvault

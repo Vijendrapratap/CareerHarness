@@ -18,11 +18,43 @@ interface JourneyState {
   stage: string;
 }
 
+interface CoverLetter {
+  title?: string;
+  body_text?: string;
+}
+
+interface PreparedPacket {
+  mode: "original" | "refine";
+  job_id: string;
+  resume_version_id: string;
+  resume_content: {
+    candidate_name?: string;
+    skills?: string[];
+    summary?: string;
+    experience?: Array<{
+      company: string;
+      dates?: string;
+      bullets?: string[];
+    }>;
+  };
+  cover_letter?: CoverLetter | null;
+  honesty_review?: {
+    is_honest: boolean;
+    violations_count?: number;
+    violations?: string[];
+  };
+  draft_source?: string;
+}
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState<JobMatchItem[]>([]);
   const [stage, setStage] = useState<string>("counsel");
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [preparingJobId, setPreparingJobId] = useState<string | null>(null);
+  const [activePacket, setActivePacket] = useState<PreparedPacket | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
 
@@ -81,6 +113,58 @@ export default function JobsPage() {
     }
   }
 
+  async function handleChoose(jobId: string, mode: "original" | "refine") {
+    setPreparingJobId(jobId);
+    setError(null);
+    setSubmitSuccess(null);
+    setActivePacket(null);
+    try {
+      const result = await api<PreparedPacket>("/api/applications/choose", {
+        method: "POST",
+        body: JSON.stringify({ job_id: jobId, mode }),
+      });
+      setActivePacket({ ...result, job_id: jobId });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(`Failed to prepare packet in ${mode} mode`);
+      }
+    } finally {
+      setPreparingJobId(null);
+    }
+  }
+
+  async function handleSubmitPacket() {
+    if (!activePacket) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await api<{ status: string; application_id: string }>(
+        "/api/applications/submit",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            job_id: activePacket.job_id,
+            resume_version_id: activePacket.resume_version_id,
+            has_connected_email: true,
+          }),
+        }
+      );
+      setSubmitSuccess(`Application submitted successfully! Tracking ID: ${res.application_id}`);
+      setActivePacket(null);
+      await loadData();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Application submission failed");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <Shell title="Scouted Jobs Board">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -128,6 +212,88 @@ export default function JobsPage() {
           </div>
         )}
 
+        {submitSuccess && (
+          <div className="p-4 text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+            <span>{submitSuccess}</span>
+            <button
+              onClick={() => window.location.assign("/applications")}
+              className="text-xs font-bold uppercase tracking-wider text-accent underline ml-4"
+            >
+              View Applications →
+            </button>
+          </div>
+        )}
+
+        {/* Prepared Packet Review Modal / Panel */}
+        {activePacket && (
+          <div className="neo-raised p-6 space-y-4 border-2 border-[#3d6b8c]/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs uppercase font-bold text-accent tracking-wider">
+                  Prepared Packet ({activePacket.mode === "original" ? "Original Master" : "Refined / Tailored"})
+                </span>
+                <h3 className="text-lg font-bold text-ink">Ready for Honest Review</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800">
+                  Honesty Verified: {activePacket.honesty_review?.is_honest ? "100% Truthful" : "Flagged"}
+                </span>
+                <span className="text-xs font-mono text-muted">
+                  Source: {activePacket.draft_source}
+                </span>
+              </div>
+            </div>
+
+            {/* Resume Summary / Top Bullets */}
+            <div className="neo-inset p-4 space-y-2 text-xs">
+              <span className="font-bold text-ink uppercase block">Resume Content Preview:</span>
+              <p className="text-ink">
+                <strong>Target Role:</strong> {activePacket.resume_content?.summary || "Factual alignment verified."}
+              </p>
+              {activePacket.resume_content?.experience?.[0] && (
+                <div className="mt-2 text-muted">
+                  <span className="font-semibold text-ink">
+                    Top Highlight ({activePacket.resume_content.experience[0].company}):
+                  </span>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    {activePacket.resume_content.experience[0].bullets?.slice(0, 2).map((b, i) => (
+                      <li key={i}>{b}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Cover Letter Preview */}
+            {activePacket.cover_letter && (
+              <div className="neo-inset p-4 text-xs space-y-1">
+                <span className="font-bold text-ink uppercase block">Drafted Cover Letter:</span>
+                <p className="whitespace-pre-line text-ink font-serif text-sm">
+                  {activePacket.cover_letter.body_text}
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setActivePacket(null)}
+                className="neo-raised px-4 py-2 text-xs font-semibold text-muted hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleSubmitPacket}
+                className="neo-pressed px-6 py-2 text-xs font-bold text-accent uppercase tracking-wider disabled:opacity-50"
+              >
+                {submitting ? "Submitting Packet..." : "Submit This Packet →"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Job Matches Listing */}
         {loading ? (
           <div className="neo-raised p-8 text-center text-muted">Loading scouted jobs...</div>
@@ -162,23 +328,23 @@ export default function JobsPage() {
                   {item.why_matched || "Matched based on core baseline skill alignment and title match."}
                 </div>
 
-                {/* Apply Buttons (Disabled for Task 7, wired in Task 8) */}
+                {/* Apply Buttons (Wired in Task 8) */}
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
                     type="button"
-                    disabled={true}
-                    className="neo-raised px-4 py-2 text-xs font-medium text-muted opacity-60 cursor-not-allowed"
-                    title="Will be enabled in Task 8"
+                    disabled={preparingJobId === item.job_id}
+                    onClick={() => handleChoose(item.job_id, "original")}
+                    className="neo-raised px-4 py-2 text-xs font-semibold text-ink hover:text-accent transition-colors disabled:opacity-50"
                   >
-                    Use my resume
+                    {preparingJobId === item.job_id ? "Preparing..." : "Use my resume"}
                   </button>
                   <button
                     type="button"
-                    disabled={true}
-                    className="neo-pressed px-4 py-2 text-xs font-semibold text-accent opacity-60 cursor-not-allowed"
-                    title="Will be enabled in Task 8"
+                    disabled={preparingJobId === item.job_id}
+                    onClick={() => handleChoose(item.job_id, "refine")}
+                    className="neo-pressed px-4 py-2 text-xs font-bold text-accent uppercase tracking-wider transition-colors disabled:opacity-50"
                   >
-                    Refine for this job
+                    {preparingJobId === item.job_id ? "Tailoring..." : "Refine for this job"}
                   </button>
                 </div>
               </div>

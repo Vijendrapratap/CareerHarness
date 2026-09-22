@@ -48,6 +48,11 @@ class ScreeningQuestionsRequest(BaseModel):
     facts_override: Optional[Dict[str, Any]] = None
 
 
+class ChooseApplyRequest(BaseModel):
+    job_id: str
+    mode: str
+
+
 class SubmitApplicationRequest(BaseModel):
     job_id: str
     resume_version_id: str
@@ -162,6 +167,35 @@ async def tailor_application_endpoint(
         "vault_version_id": vault_version_id,
         "cover_letter_version_id": cover_version_id,
     }
+
+
+@router.post("/choose")
+async def choose_application_mode(
+    req: ChooseApplyRequest,
+    tenant_id: str = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_db),
+):
+    """Prepares an application packet choosing original master resume or tailored/refined resume."""
+    if req.mode not in ("original", "refine"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="mode must be original or refine",
+        )
+    try:
+        from app.domain.apply_choice import prepare_application
+        result = await prepare_application(
+            session=session,
+            tenant_id=tenant_id,
+            job_id=req.job_id,
+            mode=req.mode,  # type: ignore[arg-type]
+        )
+        await session.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post("/cover-letter")
