@@ -15,7 +15,7 @@ Value = Union[str, List[str], None]
 class Field:
     key: str            # stable locator from the page scan
     label: str
-    kind: str           # text | email | tel | textarea | file | select | radio | checkbox | combobox
+    kind: str           # text | email | tel | textarea | file | select | radio | checkbox | combobox | buttons
     required: bool
     options: List[str] = field(default_factory=list)
     hint: str = ""      # element id/name, e.g. Greenhouse's resume input is labelled just "Attach"
@@ -58,6 +58,9 @@ _RULES = [
     ("country", r"^country"),
     ("location", r"location|\bcity\b|where are you (?:based|located)"),
 ]
+# "Are you authorized/eligible to work ... without sponsorship?" is the OPPOSITE polarity of
+# "Do you require sponsorship?", and is country-specific: never auto-answer it.
+_ELIGIBILITY = re.compile(r"authori[sz]ed|eligib|without (?:\w+ )?sponsorship|right to work", re.I)
 _DECLINE = re.compile(r"decline|prefer not|don.?t wish|do not wish|not to (?:answer|disclose|say|self)|"
                       r"choose not|rather not|i don.?t want", re.I)
 
@@ -72,6 +75,8 @@ def question_key(label: str) -> str:
 
 
 def classify(label: str, kind: str = "text", options: Optional[List[str]] = None, hint: str = "") -> Optional[str]:
+    if _ELIGIBILITY.search(_clean(label)):
+        return None
     for text in (_clean(label).lower(), re.sub(r"[_\-]+", " ", hint or "").lower()):
         for key, pattern in _RULES:
             if text and re.search(pattern, text):

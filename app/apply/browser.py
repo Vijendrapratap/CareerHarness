@@ -104,6 +104,23 @@ _SCAN_JS = r"""() => {
     const options = el.tagName === "SELECT" ? [...el.options].map((o) => clean(o.text)).filter(Boolean) : [];
     out.push({ key, label: clean(raw), kind, required: required(el, raw), options, hint: el.id || el.name || "" });
   }
+  // Yes/No answers rendered as buttons (Ashby): each group of short option buttons is one question.
+  for (const box of document.querySelectorAll("div, fieldset, [role=group], [role=radiogroup]")) {
+    const buttons = [...box.children].filter((c) => c.tagName === "BUTTON");
+    if (buttons.length < 2 || !buttons.every((b) => /^(yes|no)$/i.test((b.innerText || "").trim()))) continue;
+    let node = box.parentElement, labelEl = null;
+    for (let i = 0; node && i < 4 && !labelEl; i++, node = node.parentElement) {
+      labelEl = [...node.querySelectorAll("label, legend, [class*=title], [class*=heading]")].find((l) => !box.contains(l));
+    }
+    const raw = labelEl ? textOf(labelEl) : "";
+    if (!clean(raw)) continue;
+    const key = String(n++);
+    buttons.forEach((b) => b.setAttribute("data-ch-key", key));
+    const isRequired = /required/i.test((labelEl && labelEl.className) || "") || /[*✱]/.test(raw)
+      || box.getAttribute("aria-required") === "true";
+    out.push({ key, label: clean(firstLine(raw)), kind: "buttons", required: isRequired,
+               options: buttons.map((b) => b.innerText.trim()), hint: (labelEl && labelEl.getAttribute("for")) || "" });
+  }
   for (const [name, inputs] of Object.entries(groups)) {
     const key = String(n++);
     inputs.forEach((i) => i.setAttribute("data-ch-key", key));
@@ -148,6 +165,11 @@ async def _fill(page, f: Field, value: Any) -> Optional[str]:
         await loc.first.select_option(label=str(value))
     elif f.kind == "combobox":
         return await _fill_combobox(page, loc.first, str(value))
+    elif f.kind == "buttons":
+        for i in range(await loc.count()):
+            if (await loc.nth(i).inner_text()).strip().lower() == str(value).strip().lower():
+                await loc.nth(i).click()  # safe: the submit guard blocks any form submission this triggers
+                break
     elif f.kind in ("radio", "checkbox"):
         wanted = set(value if isinstance(value, list) else [value])
         for i in range(await loc.count()):
@@ -166,6 +188,13 @@ async def _read_back(page, f: Field) -> Any:
         return picked if f.kind == "checkbox" else (picked[0] if picked else "")
     if f.kind == "file":
         return await loc.first.evaluate("(el) => el.files && el.files[0] ? el.files[0].name : ''")
+    if f.kind == "buttons":
+        for i in range(await loc.count()):
+            member = loc.nth(i)
+            state = await member.evaluate("(b) => b.getAttribute('aria-pressed') === 'true' || /selected|active|checked/i.test(b.className)")
+            if state:
+                return (await member.inner_text()).strip()
+        return ""
     if f.kind == "combobox":
         return await loc.first.evaluate(_COMBOBOX_VALUE_JS)
     return await loc.first.input_value()
@@ -219,8 +248,21 @@ async def _screenshot(page, path: str) -> None:
         pass
 
 
+# Blocks every form submission until we deliberately submit: answer buttons on some sites are
+# type="submit", and a stray Enter in a text field would also submit.
+_SUBMIT_GUARD_JS = r"""() => {
+  if (window.__chGuard) return;
+  window.__chGuard = true;
+  window.__chAllowSubmit = false;
+  document.addEventListener("submit", (e) => {
+    if (!window.__chAllowSubmit) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+}"""
+
+
 async def _submit(page, captcha: bool) -> Tuple[str, str]:
-    button = page.locator("button[type=submit], input[type=submit]")
+    await page.evaluate("() => { window.__chAllowSubmit = true; }")
+    button = page.locator("button[type=submit]:not([data-ch-key]), input[type=submit]:not([data-ch-key])")
     if not await button.count():
         button = page.get_by_role("button", name=re.compile(r"submit|apply", re.I))
     await button.first.click()
@@ -250,6 +292,7 @@ async def run_fill(url: str, ctx: ApplyContext, submit: bool = False, screenshot
             await page.wait_for_timeout(1500)  # client-rendered forms (Ashby, Greenhouse embeds)
             if await page.locator("input[type=password]:visible").count():
                 return FillResult("handoff", message="This site needs you to sign in before applying.")
+            await page.evaluate(_SUBMIT_GUARD_JS)
 
             fields = [Field(**raw) for raw in await page.evaluate(_SCAN_JS)]
             for f in fields:

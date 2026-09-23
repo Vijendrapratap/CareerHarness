@@ -88,3 +88,12 @@ def test_how_heard_and_country_options():
 
 def test_forbidden_field_is_flagged():
     assert answer(f("Social Security Number"), CTX).source == "forbidden"
+
+
+def test_sponsorship_direction_is_never_inverted():
+    needs = ApplyContext(profile={}, facts={"needs_sponsorship": True}, memory={})
+    require_q = f("Will you now or in the future require visa sponsorship?", "select", options=["Yes", "No"])
+    assert answer(require_q, needs).value == "Yes"
+    # "authorized WITHOUT sponsorship" is an eligibility question for a specific country: always the candidate's call
+    assert classify("Are you authorized to work in the U.S. without company sponsorship?", "buttons") is None
+    assert classify("Are you legally eligible to work here without visa sponsorship?", "select") is None

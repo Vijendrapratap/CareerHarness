@@ -99,3 +99,17 @@ async def test_widget_showing_a_different_value_than_picked_is_asked(ctx, tmp_pa
     result = await run_fill((FORMS / "greenhouse_like.html").as_uri(), ctx, screenshot_path=str(tmp_path / "s.png"))
     # The widget still shows "+1": never report that as the candidate's answer (required fields get asked).
     assert all(f["label"] != "Dial code" for f in result.fields)
+
+
+@pytest.mark.asyncio
+async def test_ashby_yes_no_buttons_are_scanned_and_never_submit_the_form(ctx, tmp_path):
+    url = (FORMS / "ashby_yesno.html").as_uri()
+    first = await run_fill(url, ctx, screenshot_path=str(tmp_path / "s.png"))
+    [q] = first.questions  # required button question; the optional relocation one is left alone
+    assert q["label"] == "Are you authorized to work in the U.S. without company sponsorship?"
+    assert q["options"] == ["Yes", "No"] and q["kind"] == "buttons"
+
+    ctx.memory = {question_key(q["label"]): "Yes"}
+    second = await run_fill(url, ctx, screenshot_path=str(tmp_path / "s.png"))
+    assert second.status == "ready"  # clicking the submit-type "Yes" must not have submitted anything
+    assert by_label(second, "without company sponsorship")["value"] == "Yes"

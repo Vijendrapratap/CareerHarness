@@ -1,0 +1,37 @@
+<!doctype html><html><body>
+<form id="ashby">
+  <div class="ashby-application-form-field-entry">
+    <label for="_systemfield_name" class="_required">Legal Name</label>
+    <input id="_systemfield_name" name="_systemfield_name" required>
+  </div>
+  <div class="ashby-application-form-field-entry">
+    <label for="_systemfield_email" class="_required">Email</label>
+    <input id="_systemfield_email" name="_systemfield_email" type="email" required>
+  </div>
+  <div class="ashby-application-form-field-entry">
+    <label for="question_auth" class="_heading _required">Are you authorized to work in the U.S. without company sponsorship?</label>
+    <div class="ashby-application-form-input-yesno">
+      <!-- Like Ashby: yes/no answers are submit-type buttons inside the form -->
+      <button type="submit" aria-pressed="false">Yes</button>
+      <button type="submit" aria-pressed="false">No</button>
+    </div>
+  </div>
+  <div class="ashby-application-form-field-entry">
+    <label for="question_relocate" class="_heading">Would you relocate to NYC?</label>
+    <div class="ashby-application-form-input-yesno">
+      <button type="submit" aria-pressed="false">Yes</button>
+      <button type="submit" aria-pressed="false">No</button>
+    </div>
+  </div>
+  <p id="errors"></p>
+  <button type="submit" class="submit">Submit Application</button>
+</form>
+<script src="_thanks.js"></script>
+<script>
+  document.querySelectorAll(".ashby-application-form-input-yesno button").forEach((b) =>
+    b.addEventListener("click", () => {
+      b.parentElement.querySelectorAll("button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+    }));
+  wireSubmit("ashby");
+</script>
+</body></html>

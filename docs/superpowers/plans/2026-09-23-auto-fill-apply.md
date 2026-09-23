@@ -30,8 +30,11 @@ Bugs found live and fixed:
 - A widget showing a different value than the one clicked (phone country "+1") is now rejected.
 - Deadlock: the Counsel finalize request held an uncommitted write while its background scan waited;
   it now commits first. Scans also take a per-candidate lock, and the SQLite busy timeout is 30s.
-Known limits: Ashby yes/no *button* questions are not scanned yet (they fall to the candidate or the form
-reports them); Greenhouse and Lever show CAPTCHAs, so live submits there may end in a hand-off.
+Follow-up: Ashby Yes/No *button* questions are now scanned (Ramp's required "authorized without
+sponsorship?" was being missed, so "ready" was wrong). Those buttons are type="submit", so a page-level guard
+blocks every form submit except the deliberate one. Eligibility phrasing ("authorized/eligible ... without
+sponsorship") is always asked: its Yes/No polarity is the opposite of "do you require sponsorship?".
+Known limit: Greenhouse and Lever show CAPTCHAs, so live submits there may end in a hand-off.
 Submitting stays off until `APPLY_SUBMIT_ENABLED=true`.
 
 ## Global Constraints
