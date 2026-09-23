@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { ApplyPanel } from "@/components/ApplyPanel";
 import { Check, ExternalLink, HelpCircle, Lock, X } from "lucide-react";
 
 export const APPLY_LINE = 4.0;
@@ -110,6 +111,7 @@ export function JobFitCard({
 }) {
   const fit = item.fit;
   const canApply = !!fit && fit.score >= APPLY_LINE;
+  const [autoFill, setAutoFill] = useState(false);
   const verdict = fit ? VERDICT[fit.verdict] : null;
 
   return (
@@ -217,6 +219,14 @@ export function JobFitCard({
         )}
         <button
           type="button"
+          disabled={!canApply || autoFill}
+          onClick={() => setAutoFill(true)}
+          className="btn-amber px-5 py-2.5 text-xs uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Auto-fill application
+        </button>
+        <button
+          type="button"
           disabled={!canApply || preparing}
           onClick={() => onChoose(item.job_id, "original")}
           className="neo-raised !rounded-xl px-4 py-2 text-xs font-bold text-ink hover:text-teal-800 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -232,6 +242,7 @@ export function JobFitCard({
           {preparing ? "Tailoring..." : "Tailor & apply ✦"}
         </button>
       </div>
+      {autoFill && <ApplyPanel jobId={item.job_id} />}
     </article>
   );
 }

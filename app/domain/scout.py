@@ -491,17 +491,12 @@ async def run_scout(
     return {"sources": len(tasks), "boards_scanned": len(boards), "new_matches": len(new_job_ids)}
 
 
-async def scan_in_background(tenant_id: str) -> None:
-    """One scan in its own session (used after the scan-now request has returned)."""
-    from app.core.database import async_session_factory
-
-    async with async_session_factory() as session:
-        await run_scout(session, tenant_id)
-        await session.commit()
+# One scan per candidate at a time: overlapping scans race on the same rows (and SQLite allows one writer).
+# ponytail: process-local lock; use a Redis lock if scans move to several worker processes.
+_SCAN_LOCKS: Dict[str, asyncio.Lock] = {}
 
 
-async def start_scout_in_background(tenant_id: str) -> None:
-    """Activates the Scout schedule and runs a first scan in its own session (post-response task)."""
+async def _scan_once(tenant_id: str) -> None:
     from app.core.database import async_session_factory
 
     async with async_session_factory() as session:
@@ -509,3 +504,14 @@ async def start_scout_in_background(tenant_id: str) -> None:
         await session.commit()  # release the write lock before the slow board fetch
         await run_scout(session, tenant_id)
         await session.commit()
+
+
+async def scan_in_background(tenant_id: str) -> None:
+    """Scan for one candidate after the request that asked for it has returned; waits for a running scan."""
+    async with _SCAN_LOCKS.setdefault(tenant_id, asyncio.Lock()):
+        await _scan_once(tenant_id)
+
+
+async def start_scout_in_background(tenant_id: str) -> None:
+    """Activates the Scout schedule and runs a first scan (roles were just chosen)."""
+    await scan_in_background(tenant_id)

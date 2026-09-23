@@ -279,3 +279,22 @@ async def test_finishing_counsel_rescans_with_the_new_facts(client, sample_tenan
     monkeypatch.setattr("app.api.routers.counsel.scan_in_background", fake_scan)
     await client.post("/api/counsel/finalize", headers={"X-Tenant-ID": sample_tenant.id})
     assert started == [sample_tenant.id]
+
+
+@pytest.mark.asyncio
+async def test_scans_for_one_candidate_never_overlap(monkeypatch):
+    import asyncio
+
+    from app.domain import scout
+
+    active, peak = {"n": 0}, {"n": 0}
+
+    async def slow_scan(tenant_id):
+        active["n"] += 1
+        peak["n"] = max(peak["n"], active["n"])
+        await asyncio.sleep(0.05)
+        active["n"] -= 1
+
+    monkeypatch.setattr(scout, "_scan_once", slow_scan)
+    await asyncio.gather(scout.scan_in_background("t1"), scout.scan_in_background("t1"), scout.start_scout_in_background("t1"))
+    assert peak["n"] == 1

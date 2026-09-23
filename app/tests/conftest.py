@@ -85,3 +85,8 @@ def no_background_scout(monkeypatch):
     monkeypatch.setattr("app.api.routers.roles.start_scout_in_background", _noop)
     monkeypatch.setattr("app.api.routers.scout.scan_in_background", _noop)
     monkeypatch.setattr("app.api.routers.counsel.scan_in_background", _noop)
+
+    async def _noop_fill(session_id: str, submit: bool = False) -> None:
+        return None
+
+    monkeypatch.setattr("app.api.routers.apply.fill_in_background", _noop_fill)

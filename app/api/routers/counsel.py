@@ -100,12 +100,12 @@ async def chat_with_counsellor(
 ):
     """Live interactive chat with the AI Career Counsellor to build a strong candidate persona."""
     import httpx
+
     from app.core.keyvault import KeyVaultService
     from app.domain.journey import get_or_create_journey
 
     message = request.message.strip()
     history = request.history
-    context = request.context or {}
 
     # Extract detected attributes from message
     detected: dict = {}
@@ -245,6 +245,7 @@ async def update_counsel_preferences(
 ):
     """Saves candidate preferences directly into profile sections without requiring back-and-forth chat."""
     from sqlalchemy import select
+
     from app.domain.models import ProfileSection
 
     updates: dict = {}
@@ -305,6 +306,9 @@ async def finalize_counsel(
     journey = await get_or_create_journey(db, tenant_id)
     if journey.stage in ("counsel", "todos", "mailbox"):
         journey = await set_stage(db, tenant_id, "hunt")
+    # Commit before scheduling background work: the request's session is only closed after background
+    # tasks finish, so an uncommitted write here would hold SQLite's lock against the scan (deadlock).
+    await db.commit()
     # The first scan ran when roles were picked, before these facts existed: scan again with them.
     background_tasks.add_task(scan_in_background, tenant_id)
     return {"done": True, "stage": journey.stage}

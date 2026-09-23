@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_tenant_id
 from app.domain.fit_service import evaluate_tenant
+from app.domain.models import ResumeFile
 from app.domain.resume_parser import resume_parser
 from app.domain.vault import create_initial_master, get_master_version
 
@@ -54,6 +55,8 @@ async def upload_resume(
             )
 
         is_pdf = filename.lower().endswith(".pdf") or file_bytes.startswith(b"%PDF")
+        # Keep the original: "Apply with my resume" attaches the candidate's own file, not a re-render.
+        session.add(ResumeFile(tenant_id=tenant_id, filename=filename, content=file_bytes))
         if is_pdf:
             try:
                 parsed = await resume_parser.parse_pdf_bytes(

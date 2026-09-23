@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from app.api.routers import (
     applications,
+    apply,
     auth,
     batches,
     counsel,
@@ -116,3 +117,4 @@ app.include_router(insights.router)
 app.include_router(journey.router)
 app.include_router(counsel.router)
 app.include_router(fit.router)
+app.include_router(apply.router)

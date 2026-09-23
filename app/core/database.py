@@ -19,6 +19,8 @@ engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DB_ECHO,
     future=True,
+    # SQLite (dev) allows one writer: wait up to 30s for the lock instead of failing after 5s.
+    connect_args={"timeout": 30} if settings.DATABASE_URL.startswith("sqlite") else {},
 )
 
 async_session_factory = async_sessionmaker(

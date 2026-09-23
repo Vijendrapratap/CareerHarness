@@ -26,6 +26,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "pypdf>=4.0.0",
     "reportlab>=4.1.0",
+    "playwright>=1.50",  # browser auto-fill; run `playwright install chromium` once
 ]
 
 [project.optional-dependencies]

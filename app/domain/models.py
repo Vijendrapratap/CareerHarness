@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
 )
@@ -907,4 +908,49 @@ class JobFit(Base):
 
     __table_args__ = (
         Index("ix_job_fits_tenant_job", "tenant_id", "job_id", unique=True),
+    )
+
+
+class ResumeFile(Base):
+    """The candidate's original uploaded resume file, attached as-is when they apply with it."""
+    __tablename__ = "resume_files"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class ApplySession(Base):
+    """One browser auto-fill attempt: filled, reviewed by the candidate, then submitted or handed off."""
+    __tablename__ = "apply_sessions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("job_listings.id", ondelete="CASCADE"), nullable=False
+    )
+    mode: Mapped[str] = mapped_column(String(16), default="original")  # original | refine
+    resume_version_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    ats: Mapped[str] = mapped_column(String(32), default="")
+    apply_url: Mapped[str] = mapped_column(String(1024), default="")
+    # filling | needs_answers | ready | submitting | submitted | dry_run | handoff | failed
+    status: Mapped[str] = mapped_column(String(32), default="filling")
+    fields: Mapped[list] = mapped_column(PortableJSON, default=list)      # what was filled, with sources
+    questions: Mapped[list] = mapped_column(PortableJSON, default=list)   # what the candidate must answer
+    result_code: Mapped[str] = mapped_column(String(32), default="")
+    message: Mapped[str] = mapped_column(Text, default="")
+    screenshot_path: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )

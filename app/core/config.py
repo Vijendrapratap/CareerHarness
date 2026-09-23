@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     MICROSOFT_CLIENT_SECRET: str = ""
     APP_BASE_URL: str = "http://127.0.0.1:3000"  # public URL of the frontend
 
+    # Browser auto-fill. Submitting is OFF unless explicitly enabled: approving then only fills and
+    # validates the form ("dry run"). Turn on per environment once you trust it.
+    APPLY_SUBMIT_ENABLED: bool = False
+    APPLY_DAILY_CAP: int = 10
+    APPLY_ARTIFACT_DIR: str = "var/apply"  # screenshots and resume files handed to the browser
+
     # Host & Ports
     HOST: str = "0.0.0.0"
     PORT: int = 8000

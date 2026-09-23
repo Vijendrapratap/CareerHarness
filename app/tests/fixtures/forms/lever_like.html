@@ -1,0 +1,30 @@
+<!doctype html><html><body>
+<form id="application-form">
+  <label>Resume/CV ✱ <input type="file" name="resume" id="resume-upload-input"></label>
+  <label>Full name ✱ <input type="text" name="name" required></label>
+  <label>Email ✱ <input type="email" name="email" required></label>
+  <label>Phone ✱ <input type="text" name="phone" required></label>
+  <label>Current location ✱ <input type="text" name="location" required></label>
+  <label>Current company ✱ <input type="text" name="org" required></label>
+  <label>LinkedIn URL <input type="text" name="urls[LinkedIn]"></label>
+  <label>GitHub URL <input type="text" name="urls[GitHub]"></label>
+  <div class="application-question">
+    <div class="text">Which employment types are you open to? ✱</div>
+    <label><input type="checkbox" name="cards[emp]" value="Intern" required> Yes - Intern</label>
+    <label><input type="checkbox" name="cards[emp]" value="Full Time"> Yes - Full Time Employment</label>
+  </div>
+  <div class="application-question">
+    <div class="text">Gender</div>
+    <label><input type="radio" name="survey[gender]" value="Woman"> Woman</label>
+    <label><input type="radio" name="survey[gender]" value="Man"> Man</label>
+    <label><input type="radio" name="survey[gender]" value="Prefer not to disclose"> Prefer not to disclose</label>
+  </div>
+  <label>How did you hear about us?
+    <select name="source"><option>Select...</option><option>LinkedIn</option><option>Job board</option><option>Referral</option></select>
+  </label>
+  <p id="errors"></p>
+  <button type="submit">SUBMIT APPLICATION</button>
+</form>
+<script src="_thanks.js"></script>
+<script>wireSubmit("application-form");</script>
+</body></html>
